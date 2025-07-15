@@ -11,8 +11,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { ToogleDarkMode } from "../toogle-darkmode";
-import { SidebarTrigger } from "../ui/sidebar";
+import { SidebarTrigger, useSidebar } from "../ui/sidebar";
 import { Avatar } from "../ui/avatar";
 import { AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 
@@ -29,34 +28,18 @@ const components: { title: string; href: string; description: string }[] = [
     description:
       "For sighted users to preview content available behind a link.",
   },
-  {
-    title: "Progress",
-    href: "/docs/primitives/progress",
-    description:
-      "Displays an indicator showing the completion progress of a task, typically displayed as a progress bar.",
-  },
-  {
-    title: "Scroll-area",
-    href: "/docs/primitives/scroll-area",
-    description: "Visually or semantically separates content.",
-  },
-  {
-    title: "Tabs",
-    href: "/docs/primitives/tabs",
-    description:
-      "A set of layered sections of content—known as tab panels—that are displayed one at a time.",
-  },
-  {
-    title: "Tooltip",
-    href: "/docs/primitives/tooltip",
-    description:
-      "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
-  },
 ];
 
 export function Header() {
+  const { open } = useSidebar();
+
   return (
-    <header className="w-full flex justify-between p-[]">
+    <header
+      className="flex justify-between p-[16px] fixed top-0 z-50 rounded-[24px] transition-all duration-300 py-[24px]"
+      style={{
+        width: open ? "calc(100% - (var(--sidebar-width)))" : "100%",
+      }}
+    >
       <NavigationMenu viewport={false}>
         <NavigationMenuList>
           <NavigationMenuItem>
@@ -65,9 +48,11 @@ export function Header() {
             </NavigationMenuTrigger>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <NavigationMenuTrigger>Components</NavigationMenuTrigger>
+            <NavigationMenuTrigger className="text-[16px] font-bold">
+              GhatGPT 4o
+            </NavigationMenuTrigger>
             <NavigationMenuContent>
-              <ul className="grid w-[400px] gap-2 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+              <ul className="grid w-[400px] gap-2 md:w-[500px] md:grid-cols-1 lg:w-[600px]">
                 {components.map((component) => (
                   <ListItem
                     key={component.title}
@@ -85,9 +70,9 @@ export function Header() {
 
       <NavigationMenu>
         <NavigationMenuList>
-          <NavigationMenuItem>
+          {/* <NavigationMenuItem>
             <ToogleDarkMode />
-          </NavigationMenuItem>
+          </NavigationMenuItem> */}
           <NavigationMenuItem>
             <NavigationMenuTrigger>
               <Avatar>

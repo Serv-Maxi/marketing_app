@@ -39,7 +39,8 @@ export default function RootLayout({
         >
           <SidebarProvider>
             <AppSidebar />
-            <main className="flex-1 overflow-auto">
+
+            <main className="flex-1 overflow-auto dark:bg-[#1e1e1e]">
               <Header />
               {children}
             </main>
