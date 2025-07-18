@@ -11,7 +11,9 @@ import { Toaster } from "@/components/ui/sonner";
 import ExportDialog from "./ExportDialog";
 import PlayPauseButton from "./PlayPauseButton";
 import TimeDisplay from "./TimeDisplay";
+import FileUpload from "./FileUpload";
 import { motion } from "framer-motion";
+import { VolumeX, Volume2 } from "lucide-react";
 
 const VideoEditor = () => {
   // Using sonner toast directly
@@ -19,7 +21,10 @@ const VideoEditor = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [zoom, setZoom] = useState(100); // 100px per second
+  const [volume, setVolume] = useState(1.0); // 0.0 to 1.0
+  const [isMuted, setIsMuted] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
 
   const { clips, initializeClips } = useTimelineStore();
 
@@ -27,50 +32,38 @@ const VideoEditor = () => {
 
   // Initialize with sample clips
   useEffect(() => {
-    // Example of clips with explicit start and end times
+    // Example of clips with different video sources
     const sampleClipsWithTimes = [
       {
         id: "1",
-        src: "/video-1.mp4",
+        src: "/porttrait-1.mp4",
         startTime: 0,
-        endTime: 30,
+        endTime: 10,
         title: "Intro Clip",
       },
       {
         id: "2",
-        src: "/video-1.mp4",
-        startTime: 10,
-        endTime: 20,
+        src: "/porttrait-2.mp4",
+        startTime: 5,
+        endTime: 15,
         title: "Main Content",
       },
       {
         id: "3",
-        src: "/video-1.mp4",
-        startTime: 20,
-        endTime: 30,
+        src: "/porttrait-3.mp4",
+        startTime: 0,
+        endTime: 8,
         title: "Outro",
       },
     ];
-    
-    // Example of a clip without explicit start/end times
-    // This will use the full video duration when loaded
-    const sampleClipsWithoutTimes = [
-      {
-        id: "1",
-        src: "/video-1.mp4",
-        title: "Full Video",
-      }
-    ];
-
-    // Choose which sample to use
-    const sampleClips = sampleClipsWithTimes;
 
     // For clips with explicit times, calculate durations automatically
-    const clipsWithDurations = sampleClips.map(clip => ({
+    const clipsWithDurations = sampleClipsWithTimes.map((clip) => ({
       ...clip,
       startTime: clip.startTime || 0,
-      endTime: clip.endTime || 0, // Will be updated when video loads if not provided
-      duration: clip.endTime && clip.startTime ? clip.endTime - clip.startTime : 0 // Will be updated when video loads
+      endTime: clip.endTime || 0,
+      duration:
+        clip.endTime && clip.startTime ? clip.endTime - clip.startTime : 0,
     }));
 
     initializeClips(clipsWithDurations);
@@ -99,6 +92,14 @@ const VideoEditor = () => {
     setZoom(value[0]);
   };
 
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0]);
+  };
+
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted);
+  };
+
   return (
     <div className="flex flex-col h-full bg-background text-foreground p-4">
       <motion.div
@@ -120,17 +121,40 @@ const VideoEditor = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-grow">
-          <div className="lg:col-span-2 bg-card rounded-lg overflow-hidden border border-border shadow-sm">
-            <VideoPreview
-              ref={videoRef}
-              isPlaying={isPlaying}
-              currentClips={clips}
-              onTimeUpdate={handleTimeUpdate}
-              onDurationChange={handleDurationChange}
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-grow">
+          <div className="bg-card rounded-[24px] p-4 border border-border shadow-sm flex flex-col gap-4">
+            <h2 className="text-lg font-semibold">Assets</h2>
+
+            <h3 className="text-sm font-medium mb-2">Add Videos</h3>
+            <FileUpload />
+            <div className="mt-4">
+              <h3 className="text-sm font-medium mb-2">Clips</h3>
+              <div className="text-sm text-muted-foreground">
+                {clips.length} clips · {duration.toFixed(1)}s total
+              </div>
+            </div>
           </div>
-          <div className="bg-card rounded-lg p-4 border border-border shadow-sm flex flex-col gap-4">
+          <div className="lg:col-span-2 bg-card rounded-[24px] overflow-hidden border border-border shadow-sm flex items-center justify-center">
+            <div
+              className="bg-black/90 transition-all duration-300 ease-in-out max-w-full max-h-full"
+              style={{
+                aspectRatio: aspectRatio === "16:9" ? "16/9" : "9/16",
+                width: aspectRatio === "16:9" ? "100%" : "auto",
+                height: aspectRatio === "9:16" ? "100%" : "auto",
+              }}
+            >
+              <VideoPreview
+                ref={videoRef}
+                isPlaying={isPlaying}
+                currentClips={clips}
+                volume={volume}
+                isMuted={isMuted}
+                onTimeUpdate={handleTimeUpdate}
+                onDurationChange={handleDurationChange}
+              />
+            </div>
+          </div>
+          <div className="bg-card rounded-[24px] p-4 border border-border shadow-sm flex flex-col gap-4">
             <h2 className="text-lg font-semibold">Controls</h2>
             <div className="flex items-center gap-2">
               <PlayPauseButton
@@ -153,16 +177,62 @@ const VideoEditor = () => {
                 <span>500px/s</span>
               </div>
             </div>
-            <div className="mt-auto">
-              <h3 className="text-sm font-medium mb-2">Clips</h3>
-              <div className="text-sm text-muted-foreground">
-                {clips.length} clips · {duration.toFixed(1)}s total
+            <div className="mt-4">
+              <h3 className="text-sm font-medium mb-2">Screen Ratio</h3>
+              <div className="flex gap-2">
+                <Button
+                  variant={aspectRatio === "16:9" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setAspectRatio("16:9")}
+                  className="flex-1"
+                >
+                  16:9 Landscape
+                </Button>
+                <Button
+                  variant={aspectRatio === "9:16" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setAspectRatio("9:16")}
+                  className="flex-1"
+                >
+                  9:16 Portrait
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4">
+              <h3 className="text-sm font-medium mb-2">Audio Controls</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMuteToggle}
+                  className="p-2"
+                >
+                  {isMuted ? (
+                    <VolumeX className="h-4 w-4" />
+                  ) : (
+                    <Volume2 className="h-4 w-4" />
+                  )}
+                </Button>
+                <div className="flex-1">
+                  <Slider
+                    defaultValue={[volume]}
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    onValueChange={handleVolumeChange}
+                    disabled={isMuted}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0%</span>
+                <span>100%</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-card rounded-lg p-4 border border-border shadow-sm">
+        <div className="bg-card rounded-[24px] p-4 border border-border shadow-sm">
           <Timeline
             clips={clips}
             currentTime={currentTime}

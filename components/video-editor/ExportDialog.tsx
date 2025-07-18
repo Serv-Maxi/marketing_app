@@ -32,7 +32,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
   >("idle");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   // Using sonner toast directly
-  const { isReady, exportVideo } = useFFmpeg();
+  const { isReady, exportVideo, isMockMode } = useFFmpeg();
 
   const handleExport = async () => {
     if (!isReady || clips.length === 0) {
@@ -40,6 +40,12 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
         description: "FFmpeg is not ready or no clips are available.",
       });
       return;
+    }
+
+    if (isMockMode) {
+      toast.info("Using mock export mode", {
+        description: "FFmpeg failed to load, using fallback export simulation.",
+      });
     }
 
     setExportStatus("processing");
