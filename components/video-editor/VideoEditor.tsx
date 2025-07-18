@@ -184,7 +184,7 @@ const VideoEditor = () => {
                   variant={aspectRatio === "16:9" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setAspectRatio("16:9")}
-                  className="flex-1"
+                  className="flex-1 text-white"
                 >
                   16:9 Landscape
                 </Button>
@@ -192,7 +192,7 @@ const VideoEditor = () => {
                   variant={aspectRatio === "9:16" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setAspectRatio("9:16")}
-                  className="flex-1"
+                  className="flex-1 text-white"
                 >
                   9:16 Portrait
                 </Button>

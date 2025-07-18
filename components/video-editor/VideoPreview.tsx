@@ -50,6 +50,13 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
     const totalDuration = useRef<number>(0);
     const animationFrameRef = useRef<number | null>(null);
 
+    // Helper function to safely seek to a time
+    const safeSeekTo = (time: number) => {
+      if (playerRef.current && typeof playerRef.current.seekTo === "function") {
+        playerRef.current.seekTo(time, "seconds");
+      }
+    };
+
     // Calculate total duration of all clips
     useEffect(() => {
       if (currentClips.length > 0) {
@@ -93,13 +100,34 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
       const clipInfo = getCurrentClipInfo(timelinePosition);
       if (clipInfo && clipInfo.clipIndex !== currentClipIndex) {
         setCurrentClipIndex(clipInfo.clipIndex);
-        if (playerRef.current) {
-          playerRef.current.seekTo(clipInfo.clipActualTime, "seconds");
-        }
+        safeSeekTo(clipInfo.clipActualTime);
       }
     }, [timelinePosition, currentClipIndex, currentClips, getCurrentClipInfo]);
 
-    // Handle progress updates from ReactPlayer
+    // Handle when video ends
+    const handleVideoEnded = useCallback(() => {
+      console.log("Video ended, transitioning to next clip");
+
+      // Move to next clip
+      if (currentClipIndex < currentClips.length - 1) {
+        const nextClipIndex = currentClipIndex + 1;
+
+        setCurrentClipIndex(nextClipIndex);
+
+        // Update timeline position
+        let accumulatedTime = 0;
+        for (let i = 0; i < nextClipIndex; i++) {
+          accumulatedTime +=
+            currentClips[i].endTime - currentClips[i].startTime;
+        }
+        setTimelinePosition(accumulatedTime);
+        onTimeUpdate(accumulatedTime);
+      } else {
+        // Reached the end of all clips
+        console.log("Reached end of all clips");
+        onTimeUpdate(totalDuration.current);
+      }
+    }, [currentClipIndex, currentClips, onTimeUpdate]); // Handle progress updates from ReactPlayer
     const handleProgress = useCallback(
       (event: React.SyntheticEvent<HTMLVideoElement>) => {
         if (!isPlaying) return;
@@ -108,18 +136,27 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
         if (!currentClip) return;
 
         const currentVideoTime = (event.target as HTMLVideoElement).currentTime;
+        const videoDuration = (event.target as HTMLVideoElement).duration;
+
+        console.log(
+          `Clip ${currentClipIndex + 1}: currentTime=${currentVideoTime.toFixed(2)}, endTime=${currentClip.endTime}, duration=${videoDuration?.toFixed(2)}`
+        );
 
         // Check if we've reached the end of the current clip
-        if (currentVideoTime >= currentClip.endTime) {
+        // Use either the clip's endTime or 90% of video duration as trigger
+        const clipEndTrigger = Math.min(
+          currentClip.endTime,
+          videoDuration * 0.9
+        );
+
+        if (currentVideoTime >= clipEndTrigger) {
+          console.log("Transitioning to next clip...");
+
           // Move to next clip
           if (currentClipIndex < currentClips.length - 1) {
             const nextClipIndex = currentClipIndex + 1;
-            const nextClip = currentClips[nextClipIndex];
 
             setCurrentClipIndex(nextClipIndex);
-            if (playerRef.current) {
-              playerRef.current.seekTo(nextClip.startTime, "seconds");
-            }
 
             // Update timeline position
             let accumulatedTime = 0;
@@ -131,6 +168,7 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
             onTimeUpdate(accumulatedTime);
           } else {
             // Reached the end of all clips
+            console.log("Reached end of all clips");
             onTimeUpdate(totalDuration.current);
           }
         } else {
@@ -162,10 +200,10 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
       () => ({
         seekTo: (time: number) => {
           const clipInfo = getCurrentClipInfo(time);
-          if (clipInfo && playerRef.current) {
+          if (clipInfo) {
             setCurrentClipIndex(clipInfo.clipIndex);
             setTimelinePosition(time);
-            playerRef.current.seekTo(clipInfo.clipActualTime, "seconds");
+            safeSeekTo(clipInfo.clipActualTime);
           }
         },
       }),
@@ -189,6 +227,7 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
               height="100%"
               controls={false}
               onTimeUpdate={handleProgress}
+              onEnded={handleVideoEnded}
               style={{
                 objectFit: "contain",
               }}

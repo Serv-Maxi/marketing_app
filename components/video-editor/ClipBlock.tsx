@@ -193,6 +193,13 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
           className="hidden"
           muted
           playsInline
+          onLoad={(e) => {
+            const video = e.currentTarget;
+            video.currentTime =
+              clip.startTime + (clip.endTime - clip.startTime) / 2; // Middle of the clip
+
+            console.log("Video loaded for thumbnail generation", video);
+          }}
         />
 
         {/* Resize handles */}
