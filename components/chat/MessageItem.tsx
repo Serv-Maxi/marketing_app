@@ -16,16 +16,20 @@ export function MessageItem({ message }: { message: Message }) {
         isUser ? "justify-end" : "justify-start"
       )}
     >
-      <div
+      <p
         className={cn(
-          "max-w-[80%] px-4 py-2 rounded-2xl text-sm shadow transition",
+          "max-w-[80%] px-4 py-1 rounded-2xl text-md transition font-medium leading-[1.75] font-[400]",
           isUser
-            ? "bg-[#131114] text-white rounded-br-md"
+            ? "bg-[#181818] text-white/90 rounded-[20px] px-[20px] py-[12px]"
             : "bg-transparent text-white rounded-bl-md border border-none shadow-none"
         )}
+        style={{
+          letterSpacing: "0.02em",
+          fontWeight: "500",
+        }}
       >
         {message.content}
-      </div>
+      </p>
     </div>
   );
 }

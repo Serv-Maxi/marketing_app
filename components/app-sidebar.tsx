@@ -58,7 +58,7 @@ const chatItems = [
 export function AppSidebar() {
   return (
     <Sidebar className="border-none">
-      <SidebarContent className="bg-[#1e1e1e]">
+      <SidebarContent className="border-r">
         <SidebarGroup>
           <SidebarGroupLabel>
             <div className="flex items-center gap-2">
@@ -71,9 +71,12 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="my-[24px]">
               <SidebarMenuItem>
-                <SidebarMenuButton className="text-[#9E2AB2] bg-[#9e2ab212] hover:bg-[#9e2ab212] font-semibold !py-[20px] mb-[24px] flex justify-center rounded-[12px]">
+                <SidebarMenuButton className="text-[#9E2AB2] border-[#9E2AB2] border-[1px] bg-[#9e2ab212] hover:bg-[#9e2ab212] font-semibold p-0 mb-[24px] flex rounded-[20px] !h-auto p-[4px]">
                   <div className="flex items-center gap-2 font-bold">
-                    <PlusIcon size={18} strokeWidth={3} /> New Chat
+                    <div className="bg-primary/20 h-[45px] w-[45px] flex items-center justify-center rounded-[14px]">
+                      <PlusIcon size={18} strokeWidth={3} />
+                    </div>
+                    Add New Chat
                   </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>

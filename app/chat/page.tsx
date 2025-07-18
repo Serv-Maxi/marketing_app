@@ -6,7 +6,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { Message } from "@/components/chat/MessageItem";
 import { Button } from "@/components/ui/button";
 import { Calculator, Globe, Image, UserPlus, Video } from "lucide-react";
-import { sendMessageToAI } from "@/lib/api-service";
+import { ChatServices } from "@/services/chat";
 
 // Fallback id generator if uuid is not installed
 function genId() {
@@ -28,7 +28,7 @@ const quickActions = [
   },
   {
     icon: Globe,
-    label: "Generate  Landing Page",
+    label: "Generate Landing Page",
     description: "Generate Landing Page",
     prompt: "Generate Landing Page",
   },
@@ -46,38 +46,179 @@ const quickActions = [
   },
 ];
 
+const messageDummy: Message[] = [
+  {
+    id: genId(),
+    role: "ai",
+    content: "1. Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: "Hello, I'm your AI assistant!",
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: `Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+
+The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: `Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+
+The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: `Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+
+The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: `Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+
+The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: `Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+
+The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "ai",
+    content: `Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+
+The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+    timestamp: Date.now(),
+  },
+  {
+    id: genId(),
+    role: "user",
+    content: `Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+
+The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+    timestamp: Date.now(),
+  },
+];
 export const ChatBox = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(messageDummy);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"welcome" | "chat">("welcome");
+  const [mode, setMode] = useState<"welcome" | "chat">("chat");
 
   // Send message to AI API and get response
   const sendAIResponse = async (userMessage: string) => {
     setLoading(true);
     try {
-      const aiResponse = await sendMessageToAI(userMessage);
-      
+      const response = await ChatServices.sendMessage({ text: userMessage });
+
+      if (response.data.code !== 200) {
+        throw new Error("Failed to get AI response");
+      }
+
       setMessages((msgs) => [
         ...msgs,
         {
           id: genId(),
           role: "ai",
-          content: aiResponse,
+          content: response.data.data.text,
           timestamp: Date.now(),
         },
       ]);
     } catch (error) {
-      console.error("Error getting AI response:", error);
-      setMessages((msgs) => [
-        ...msgs,
-        {
-          id: genId(),
-          role: "ai",
-          content: "Sorry, I encountered an error. Please try again later.",
-          timestamp: Date.now(),
-        },
-      ]);
+      if (error instanceof Error) {
+        setMessages((msgs) => [
+          ...msgs,
+          {
+            id: genId(),
+            role: "ai",
+            content: error.message,
+            timestamp: Date.now(),
+          },
+        ]);
+      }
     } finally {
       setLoading(false);
     }
@@ -120,7 +261,7 @@ export const ChatBox = () => {
   };
 
   return (
-    <div className="flex flex-col w-full max-w-[800px] mx-auto overflow-hidden h-screen">
+    <div className="flex flex-col w-full max-w-[800px] mx-auto overflow-hidden min-h-screen">
       {mode === "welcome" ? (
         <div className="flex flex-col items-center justify-center flex-1 min-h-[60vh] p-8 gap-8">
           <h1 className="text-3xl font-bold tracking-tight text-center">
@@ -149,7 +290,9 @@ export const ChatBox = () => {
           </div>
         </div>
       ) : (
-        <div>
+        <div className="pb-[168px] pt-[24px]">
+          {" "}
+          {/* Increased padding to account for fixed input */}
           <MessageList messages={messages} />
           {loading && (
             <div className="flex items-center gap-2 px-4 py-2 text-muted-foreground animate-pulse">
@@ -161,7 +304,7 @@ export const ChatBox = () => {
       )}
       {/* Chat input at the bottom in chat mode */}
       {mode === "chat" && (
-        <div className="w-full bg-background z-10 fixed bottom-0 max-w-[800px]">
+        <div className="w-full z-10 fixed bottom-0 max-w-[800px] pt-2">
           <ChatInput
             value={input}
             loading={loading}

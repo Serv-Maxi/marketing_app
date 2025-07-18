@@ -35,7 +35,7 @@ export function Header() {
 
   return (
     <header
-      className="flex justify-between p-[16px] fixed top-0 z-50 rounded-[24px] transition-all duration-300 py-[24px]"
+      className="flex justify-between p-[16px] fixed top-0 z-50 rounded-[24px] transition-all duration-300 bg-background"
       style={{
         width: open ? "calc(100% - (var(--sidebar-width)))" : "100%",
       }}
