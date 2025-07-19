@@ -1,5 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "picsum.photos",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
+        port: "",
+        pathname: "/**",
+      },
+    ],
+  },
   webpack: (config) => {
     // Required for FFmpeg.wasm to work
     config.resolve.fallback = {
@@ -9,18 +25,18 @@ const nextConfig = {
       crypto: false,
       os: false,
     };
-    
+
     // Add WASM support
     config.experiments = {
       ...config.experiments,
       asyncWebAssembly: true,
     };
-    
+
     return config;
   },
   // Enable experimental features needed for FFmpeg
   experimental: {
-    serverComponentsExternalPackages: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
+    serverComponentsExternalPackages: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],
   },
 };
 

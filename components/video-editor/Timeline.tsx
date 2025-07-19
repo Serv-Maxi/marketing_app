@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from "framer-motion";
 import TimeRulerSeekBar from "./TimeRulerSeekBar";
 import ClipBlock from "./ClipBlock";
+import AudioBlock from "./AudioBlock";
 import {
   DndContext,
   DragEndEvent,
@@ -34,7 +35,7 @@ const Timeline: React.FC<TimelineProps> = ({
   const timelineRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const { reorderClips } = useTimelineStore();
+  const { reorderClips, audioTracks } = useTimelineStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -111,38 +112,63 @@ const Timeline: React.FC<TimelineProps> = ({
             onSeek={onSeek}
           />
 
-          <div className="mt-8">
-            <DndContext
-              sensors={sensors}
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={handleDragEnd}
-
-            >
-              <SortableContext
-                items={clips.map((clip) => clip.id)}
-                strategy={horizontalListSortingStrategy}
+          <div className="mt-8 space-y-4">
+            {/* Video Clips Track */}
+            <div>
+              <h3 className="text-xs font-medium text-muted-foreground mb-2">
+                Video Clips
+              </h3>
+              <DndContext
+                sensors={sensors}
+                onDragStart={() => setIsDragging(true)}
+                onDragEnd={handleDragEnd}
               >
-                <AnimatePresence mode="popLayout">
-                  <motion.div 
-                    className="flex flex-row gap-2" 
-                    layout
-                    transition={{ 
-                      type: "spring", 
-                      bounce: 0.2,
-                      duration: 0.6 
-                    }}>
-                  {clips.map((clip, index) => (
-                    <ClipBlock
-                      key={clip.id}
-                      clip={clip}
+                <SortableContext
+                  items={clips.map((clip) => clip.id)}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  <AnimatePresence mode="popLayout">
+                    <motion.div
+                      className="flex flex-row gap-2"
+                      layout
+                      transition={{
+                        type: "spring",
+                        bounce: 0.2,
+                        duration: 0.6,
+                      }}
+                    >
+                      {clips.map((clip, index) => (
+                        <ClipBlock
+                          key={clip.id}
+                          clip={clip}
+                          index={index}
+                          zoom={zoom}
+                        />
+                      ))}
+                    </motion.div>
+                  </AnimatePresence>
+                </SortableContext>
+              </DndContext>
+            </div>
+
+            {/* Audio Tracks */}
+            {audioTracks.length > 0 && (
+              <div>
+                <h3 className="text-xs font-medium text-muted-foreground mb-2">
+                  Audio Tracks
+                </h3>
+                <div className="flex flex-row gap-2">
+                  {audioTracks.map((audioTrack, index) => (
+                    <AudioBlock
+                      key={audioTrack.id}
+                      audioTrack={audioTrack}
                       index={index}
                       zoom={zoom}
                     />
                   ))}
-                  </motion.div>
-                </AnimatePresence>
-              </SortableContext>
-            </DndContext>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

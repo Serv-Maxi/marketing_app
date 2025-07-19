@@ -12,6 +12,7 @@ import ExportDialog from "./ExportDialog";
 import PlayPauseButton from "./PlayPauseButton";
 import TimeDisplay from "./TimeDisplay";
 import FileUpload from "./FileUpload";
+import AudioUpload from "./AudioUpload";
 import { motion } from "framer-motion";
 import { VolumeX, Volume2 } from "lucide-react";
 
@@ -26,47 +27,102 @@ const VideoEditor = () => {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
 
-  const { clips, initializeClips } = useTimelineStore();
+  const { clips, audioTracks, initializeClips } = useTimelineStore();
 
   const videoRef = useRef<{ seekTo: (time: number) => void }>(null);
 
+  // Utility function to get video duration
+  const getVideoDuration = (src: string): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+
+      video.onloadedmetadata = () => {
+        resolve(video.duration);
+      };
+
+      video.onerror = () => {
+        reject(new Error(`Failed to load video: ${src}`));
+      };
+
+      video.src = src;
+    });
+  };
+
   // Initialize with sample clips
   useEffect(() => {
-    // Example of clips with different video sources
-    const sampleClipsWithTimes = [
-      {
-        id: "1",
-        src: "/porttrait-1.mp4",
-        startTime: 0,
-        endTime: 10,
-        title: "Intro Clip",
-      },
-      {
-        id: "2",
-        src: "/porttrait-2.mp4",
-        startTime: 5,
-        endTime: 15,
-        title: "Main Content",
-      },
-      {
-        id: "3",
-        src: "/porttrait-3.mp4",
-        startTime: 0,
-        endTime: 8,
-        title: "Outro",
-      },
-    ];
+    const initializeClipsWithDuration = async () => {
+      // Example of clips - some with explicit times, some without
+      const sampleClipsWithTimes = [
+        {
+          id: "1",
+          src: "/porttrait-1.mp4",
+          startTime: 0,
+          endTime: 6.9, // Explicit end time
+          title: "Intro Clip",
+        },
+        {
+          id: "2",
+          src: "/porttrait-2.mp4",
+          // No startTime/endTime defined - will use full video duration
+          title: "Main Content",
+        },
+        {
+          id: "3",
+          src: "/porttrait-4.mp4",
+          title: "Outro",
+        },
+      ];
 
-    // For clips with explicit times, calculate durations automatically
-    const clipsWithDurations = sampleClipsWithTimes.map((clip) => ({
-      ...clip,
-      startTime: clip.startTime || 0,
-      endTime: clip.endTime || 0,
-      duration:
-        clip.endTime && clip.startTime ? clip.endTime - clip.startTime : 0,
-    }));
+      try {
+        // Process clips to get durations
+        const clipsWithDurations = await Promise.all(
+          sampleClipsWithTimes.map(async (clip) => {
+            // If startTime and endTime are not defined, get full video duration
+            if (clip.startTime === undefined || clip.endTime === undefined) {
+              try {
+                const videoDuration = await getVideoDuration(clip.src);
+                return {
+                  ...clip,
+                  startTime: 0,
+                  endTime: videoDuration,
+                  duration: videoDuration,
+                };
+              } catch {
+                return {
+                  ...clip,
+                  startTime: 0,
+                  endTime: 10, // Fallback duration
+                  duration: 10,
+                };
+              }
+            } else {
+              // Use explicit times
+              return {
+                ...clip,
+                startTime: clip.startTime,
+                endTime: clip.endTime,
+                duration: clip.endTime - clip.startTime,
+              };
+            }
+          })
+        );
 
-    initializeClips(clipsWithDurations);
+        initializeClips(clipsWithDurations);
+      } catch (error) {
+        console.error("Error initializing clips:", error);
+        // Fallback with default durations
+        const fallbackClips = sampleClipsWithTimes.map((clip) => ({
+          ...clip,
+          startTime: clip.startTime || 0,
+          endTime: clip.endTime || 10,
+          duration: (clip.endTime || 10) - (clip.startTime || 0),
+        }));
+        initializeClips(fallbackClips);
+      }
+    };
+
+    initializeClipsWithDuration();
   }, [initializeClips]);
 
   const handlePlayPause = () => {
@@ -128,6 +184,10 @@ const VideoEditor = () => {
             <h3 className="text-sm font-medium mb-2">Add Videos</h3>
             <FileUpload />
             <div className="mt-4">
+              <h3 className="text-sm font-medium mb-2">Add Audio</h3>
+              <AudioUpload />
+            </div>
+            <div className="mt-4">
               <h3 className="text-sm font-medium mb-2">Clips</h3>
               <div className="text-sm text-muted-foreground">
                 {clips.length} clips · {duration.toFixed(1)}s total
@@ -147,6 +207,7 @@ const VideoEditor = () => {
                 ref={videoRef}
                 isPlaying={isPlaying}
                 currentClips={clips}
+                audioTracks={audioTracks}
                 volume={volume}
                 isMuted={isMuted}
                 onTimeUpdate={handleTimeUpdate}

@@ -8,19 +8,12 @@ import React, {
   useCallback,
 } from "react";
 import ReactPlayer from "react-player";
-import { Clip } from "@/lib/video-editor/types";
-
-// Define proper types for ReactPlayer instance
-interface ReactPlayerInstance {
-  seekTo: (amount: number, type: "seconds" | "fraction") => void;
-  pause: () => void;
-  play: () => void;
-  getCurrentTime: () => number;
-}
+import { Clip, AudioTrack } from "@/lib/video-editor/types";
 
 interface VideoPreviewProps {
   isPlaying: boolean;
   currentClips: Clip[];
+  audioTracks?: AudioTrack[];
   volume?: number;
   isMuted?: boolean;
   onTimeUpdate: (time: number) => void;
@@ -36,6 +29,7 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
     {
       isPlaying,
       currentClips,
+      audioTracks = [],
       volume = 1.0,
       isMuted = false,
       onTimeUpdate,
@@ -45,10 +39,10 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
   ) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const playerRef = useRef<any>(null);
+    const audioRefs = useRef<HTMLAudioElement[]>([]);
     const [currentClipIndex, setCurrentClipIndex] = useState(0);
     const [timelinePosition, setTimelinePosition] = useState(0);
     const totalDuration = useRef<number>(0);
-    const animationFrameRef = useRef<number | null>(null);
 
     // Helper function to safely seek to a time
     const safeSeekTo = (time: number) => {
@@ -57,190 +51,233 @@ const VideoPreview = forwardRef<VideoPreviewRef, VideoPreviewProps>(
       }
     };
 
-    // Calculate total duration of all clips
+    // Initialize audio elements
+    useEffect(() => {
+      audioRefs.current = audioTracks.map((track) => {
+        const audio = document.createElement("audio");
+        audio.src = track.src;
+        audio.volume = track.volume;
+        audio.muted = isMuted;
+        audio.preload = "auto";
+        return audio;
+      });
+
+      return () => {
+        // Cleanup audio elements
+        audioRefs.current.forEach((audio) => {
+          audio.pause();
+          audio.src = "";
+        });
+      };
+    }, [audioTracks, isMuted]);
+
+    // Handle audio playback state
+    useEffect(() => {
+      audioRefs.current.forEach((audio, index) => {
+        const track = audioTracks[index];
+        if (!track) return;
+
+        audio.volume = track.volume;
+        audio.muted = isMuted;
+
+        if (isPlaying) {
+          const currentTime = timelinePosition;
+          if (currentTime >= track.startTime && currentTime <= track.endTime) {
+            const audioTime = currentTime - track.startTime;
+            audio.currentTime = audioTime;
+            audio.play().catch(console.error);
+          }
+        } else {
+          audio.pause();
+        }
+      });
+    }, [isPlaying, timelinePosition, audioTracks, isMuted]);
+
+    // Sync audio with timeline position
+    useEffect(() => {
+      audioRefs.current.forEach((audio, index) => {
+        const track = audioTracks[index];
+        if (!track) return;
+
+        const currentTime = timelinePosition;
+        if (currentTime >= track.startTime && currentTime <= track.endTime) {
+          const audioTime = currentTime - track.startTime;
+          if (Math.abs(audio.currentTime - audioTime) > 0.1) {
+            audio.currentTime = audioTime;
+          }
+        } else {
+          audio.pause();
+        }
+      });
+    }, [timelinePosition, audioTracks]);
+
+    // Calculate total duration from all clips
     useEffect(() => {
       if (currentClips.length > 0) {
-        const duration = currentClips.reduce(
-          (total, clip) => total + (clip.endTime - clip.startTime),
+        const totalDur = currentClips.reduce(
+          (acc, clip) => acc + (clip.duration || 0),
           0
         );
-        totalDuration.current = duration;
-        onDurationChange(duration);
+        totalDuration.current = totalDur;
+        onDurationChange(totalDur);
       }
     }, [currentClips, onDurationChange]);
 
     // Find current clip based on timeline position
-    const getCurrentClipInfo = useCallback(
-      (timelineTime: number) => {
-        let accumulatedTime = 0;
-        for (let i = 0; i < currentClips.length; i++) {
-          const clip = currentClips[i];
-          const clipDuration = clip.endTime - clip.startTime;
+    useEffect(() => {
+      let accumulatedTime = 0;
+      let foundIndex = 0;
 
+      for (let i = 0; i < currentClips.length; i++) {
+        const clipDuration = currentClips[i]?.duration || 0;
+        if (
+          timelinePosition >= accumulatedTime &&
+          timelinePosition < accumulatedTime + clipDuration
+        ) {
+          foundIndex = i;
+          break;
+        }
+        accumulatedTime += clipDuration;
+      }
+
+      setCurrentClipIndex(foundIndex);
+    }, [timelinePosition, currentClips]);
+
+    /**
+     * Timeline position update handler
+     * the time is from this field @currentTime - event.currentTarget.currentTime
+     * Do not change this logic
+     */
+
+    const handleTimeUpdate = useCallback(
+      (event: React.SyntheticEvent<HTMLVideoElement>) => {
+        const playedSeconds = event.currentTarget.currentTime;
+        if (isPlaying) {
+          // Calculate timeline position
+          let accumulatedTime = 0;
+          const currentClip = currentClips[currentClipIndex];
+
+          for (let i = 0; i < currentClipIndex; i++) {
+            accumulatedTime += currentClips[i]?.duration || 0;
+          }
+
+          const timelinePos = accumulatedTime + playedSeconds;
+
+          // WIP: cause music glitch
+          // setTimelinePosition(timelinePos);
+
+          onTimeUpdate(timelinePos);
+
+          /**
+           *  Next Clip Logic:
+           *  Check if we need to switch to next clip
+           *  need to ensure the duration is well defined
+           *
+           * if not, it will beack to the first clip
+           */
+
+          console.log(
+            currentClipIndex,
+            currentClips.length - 1,
+            playedSeconds,
+            currentClip.duration || 0
+          );
+          if (currentClip && playedSeconds >= (currentClip.duration || 0)) {
+            console.log("B", currentClipIndex, currentClips.length - 1);
+            if (currentClipIndex === currentClips.length - 1) {
+              setCurrentClipIndex(0);
+              safeSeekTo(0); // Reset to the start of the first clip
+              setTimelinePosition(0);
+              onTimeUpdate(0);
+              audioRefs.current.forEach((audio) => {
+                audio.pause();
+                audio.currentTime = 0;
+              });
+              return;
+            }
+            if (currentClipIndex < currentClips.length - 1) {
+              setCurrentClipIndex(currentClipIndex + 1);
+            }
+          }
+        }
+      },
+      [isPlaying, currentClips, currentClipIndex, onTimeUpdate]
+    );
+
+    // Expose seekTo method
+    useImperativeHandle(ref, () => ({
+      seekTo: (time: number) => {
+        setTimelinePosition(time);
+
+        // Find which clip this time belongs to
+        let accumulatedTime = 0;
+        let targetClipIndex = 0;
+        let seekTime = time;
+
+        for (let i = 0; i < currentClips.length; i++) {
+          const clipDuration = currentClips[i]?.duration || 0;
           if (
-            timelineTime >= accumulatedTime &&
-            timelineTime < accumulatedTime + clipDuration
+            time >= accumulatedTime &&
+            time < accumulatedTime + clipDuration
           ) {
-            return {
-              clipIndex: i,
-              clip,
-              clipRelativeTime: timelineTime - accumulatedTime,
-              clipActualTime: clip.startTime + (timelineTime - accumulatedTime),
-            };
+            targetClipIndex = i;
+            seekTime = time - accumulatedTime;
+            break;
           }
           accumulatedTime += clipDuration;
         }
-        return null;
+
+        setCurrentClipIndex(targetClipIndex);
+        safeSeekTo(seekTime);
       },
-      [currentClips]
-    );
+    }));
 
-    // Update current clip when timeline position changes
+    // Handle clip changes
     useEffect(() => {
-      const clipInfo = getCurrentClipInfo(timelinePosition);
-      if (clipInfo && clipInfo.clipIndex !== currentClipIndex) {
-        setCurrentClipIndex(clipInfo.clipIndex);
-        safeSeekTo(clipInfo.clipActualTime);
-      }
-    }, [timelinePosition, currentClipIndex, currentClips, getCurrentClipInfo]);
-
-    // Handle when video ends
-    const handleVideoEnded = useCallback(() => {
-      console.log("Video ended, transitioning to next clip");
-
-      // Move to next clip
-      if (currentClipIndex < currentClips.length - 1) {
-        const nextClipIndex = currentClipIndex + 1;
-
-        setCurrentClipIndex(nextClipIndex);
-
-        // Update timeline position
-        let accumulatedTime = 0;
-        for (let i = 0; i < nextClipIndex; i++) {
-          accumulatedTime +=
-            currentClips[i].endTime - currentClips[i].startTime;
-        }
-        setTimelinePosition(accumulatedTime);
-        onTimeUpdate(accumulatedTime);
-      } else {
-        // Reached the end of all clips
-        console.log("Reached end of all clips");
-        onTimeUpdate(totalDuration.current);
-      }
-    }, [currentClipIndex, currentClips, onTimeUpdate]); // Handle progress updates from ReactPlayer
-    const handleProgress = useCallback(
-      (event: React.SyntheticEvent<HTMLVideoElement>) => {
-        if (!isPlaying) return;
-
+      if (currentClips[currentClipIndex]) {
         const currentClip = currentClips[currentClipIndex];
-        if (!currentClip) return;
+        let accumulatedTime = 0;
 
-        const currentVideoTime = (event.target as HTMLVideoElement).currentTime;
-        const videoDuration = (event.target as HTMLVideoElement).duration;
-
-        console.log(
-          `Clip ${currentClipIndex + 1}: currentTime=${currentVideoTime.toFixed(2)}, endTime=${currentClip.endTime}, duration=${videoDuration?.toFixed(2)}`
-        );
-
-        // Check if we've reached the end of the current clip
-        // Use either the clip's endTime or 90% of video duration as trigger
-        const clipEndTrigger = Math.min(
-          currentClip.endTime,
-          videoDuration * 0.9
-        );
-
-        if (currentVideoTime >= clipEndTrigger) {
-          console.log("Transitioning to next clip...");
-
-          // Move to next clip
-          if (currentClipIndex < currentClips.length - 1) {
-            const nextClipIndex = currentClipIndex + 1;
-
-            setCurrentClipIndex(nextClipIndex);
-
-            // Update timeline position
-            let accumulatedTime = 0;
-            for (let i = 0; i < nextClipIndex; i++) {
-              accumulatedTime +=
-                currentClips[i].endTime - currentClips[i].startTime;
-            }
-            setTimelinePosition(accumulatedTime);
-            onTimeUpdate(accumulatedTime);
-          } else {
-            // Reached the end of all clips
-            console.log("Reached end of all clips");
-            onTimeUpdate(totalDuration.current);
-          }
-        } else {
-          // Update timeline position within current clip
-          const clipRelativeTime = currentVideoTime - currentClip.startTime;
-          let accumulatedTime = 0;
-          for (let i = 0; i < currentClipIndex; i++) {
-            accumulatedTime +=
-              currentClips[i].endTime - currentClips[i].startTime;
-          }
-          const newTimelinePosition = accumulatedTime + clipRelativeTime;
-          setTimelinePosition(newTimelinePosition);
-          onTimeUpdate(newTimelinePosition);
+        for (let i = 0; i < currentClipIndex; i++) {
+          accumulatedTime += currentClips[i]?.duration || 0;
         }
-      },
-      [isPlaying, currentClipIndex, currentClips, onTimeUpdate]
-    );
 
-    // Remove the old time update loop
-    useEffect(() => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+        const seekTime = timelinePosition - accumulatedTime;
+        if (seekTime >= 0 && seekTime <= (currentClip.duration || 0)) {
+          safeSeekTo(seekTime);
+        }
       }
-    }, []);
+    }, [currentClipIndex, timelinePosition, currentClips]);
 
-    // Expose seekTo method to parent component
-    useImperativeHandle(
-      ref,
-      () => ({
-        seekTo: (time: number) => {
-          const clipInfo = getCurrentClipInfo(time);
-          if (clipInfo) {
-            setCurrentClipIndex(clipInfo.clipIndex);
-            setTimelinePosition(time);
-            safeSeekTo(clipInfo.clipActualTime);
-          }
-        },
-      }),
-      [getCurrentClipInfo]
-    );
+    const currentClip = currentClips[currentClipIndex];
 
-    // Get the current clip to display
-    const activeClip = currentClips[currentClipIndex];
+    if (!currentClip) {
+      return (
+        <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
+          <p className="text-gray-500">No video clips available</p>
+        </div>
+      );
+    }
 
     return (
-      <div className="relative w-full h-full flex items-center justify-center">
-        {activeClip ? (
-          <div className="w-full h-full relative">
-            <ReactPlayer
-              ref={playerRef}
-              src={activeClip.src}
-              playing={isPlaying}
-              volume={volume}
-              muted={isMuted}
-              width="100%"
-              height="100%"
-              controls={false}
-              onTimeUpdate={handleProgress}
-              onEnded={handleVideoEnded}
-              style={{
-                objectFit: "contain",
-              }}
-            />
-
-            {/* Clip indicator */}
-            <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-              {activeClip.title} ({currentClipIndex + 1}/{currentClips.length})
-            </div>
-          </div>
-        ) : (
-          <div className="text-muted-foreground">No video clips available</div>
-        )}
+      <div className="relative w-full h-full rounded-lg overflow-hidden bg-black">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {React.createElement(ReactPlayer as any, {
+          ref: playerRef,
+          src: currentClip.src,
+          width: "100%",
+          height: "100%",
+          playing: isPlaying,
+          volume: volume,
+          muted: isMuted,
+          onTimeUpdate: handleTimeUpdate,
+          onError: (error: unknown) => {
+            console.error("ReactPlayer error:", error);
+          },
+          onReady: () => {
+            // Player is ready
+          },
+        })}
       </div>
     );
   }
