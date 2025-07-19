@@ -6,7 +6,7 @@ import { Clip } from "@/lib/video-editor/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimelineStore } from "@/hooks/video-editor/useTimeline";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Scissors } from "lucide-react";
 
 interface ClipBlockProps {
   clip: Clip;
@@ -24,11 +24,14 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
     isDragging,
   } = useSortable({ id: clip.id });
 
-  const { updateClipTrim, restoreClipOriginalDuration } = useTimelineStore();
+  const { updateClipTrim, restoreClipOriginalDuration, cutClip } =
+    useTimelineStore();
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
   const [originalClip, setOriginalClip] = useState<Clip | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(false);
+  const [showCutIndicator, setShowCutIndicator] = useState(false);
+  const [cutPosition, setCutPosition] = useState<number>(0);
   const resizeStartX = useRef<number>(0);
   const isResizingRef = useRef<"start" | "end" | null>(null);
   const originalClipRef = useRef<Clip | null>(null);
@@ -153,6 +156,52 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
     restoreClipOriginalDuration(clip.id);
   };
 
+  const handleClipClick = (e: React.MouseEvent) => {
+    // Only handle click if not resizing and not dragging
+    if (isResizing || isDragging) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clipWidth = rect.width;
+
+    // Calculate the time position of the click
+    const relativePosition = clickX / clipWidth;
+    const cutTime =
+      clip.startTime + (clip.endTime - clip.startTime) * relativePosition;
+
+    // Don't cut too close to the edges (minimum 0.5 seconds from each edge)
+    const minCutTime = clip.startTime + 0.5;
+    const maxCutTime = clip.endTime - 0.5;
+
+    if (cutTime >= minCutTime && cutTime <= maxCutTime) {
+      cutClip(clip.id, cutTime);
+    }
+  };
+
+  const handleClipMouseMove = (e: React.MouseEvent) => {
+    if (isResizing || isDragging) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const clipWidth = rect.width;
+
+    // Show cut indicator when mouse is not near edges
+    const edgeThreshold = 20; // pixels
+    const isNearEdge =
+      mouseX < edgeThreshold || mouseX > clipWidth - edgeThreshold;
+
+    if (!isNearEdge) {
+      setShowCutIndicator(true);
+      setCutPosition(mouseX);
+    } else {
+      setShowCutIndicator(false);
+    }
+  };
+
+  const handleClipMouseLeave = () => {
+    setShowCutIndicator(false);
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -175,7 +224,12 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
           delay: isDragging ? 0 : index * 0.05,
         }}
         onMouseEnter={() => setShowControls(true)}
-        onMouseLeave={() => setShowControls(false)}
+        onMouseLeave={() => {
+          setShowControls(false);
+          handleClipMouseLeave();
+        }}
+        onMouseMove={handleClipMouseMove}
+        onClick={handleClipClick}
       >
         {/* Left resize handle */}
         <div
@@ -222,6 +276,18 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
                 </div>
               </div>
             )}
+
+            {/* Cut indicator line */}
+            {showCutIndicator && !isResizing && (
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-20"
+                style={{ left: `${cutPosition}px` }}
+              >
+                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
+                  <Scissors className="h-3 w-3 text-red-500 bg-white rounded-full p-0.5" />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Duration and controls */}
@@ -231,16 +297,28 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
             </span>
 
             {/* Control buttons - only show on hover */}
-            {showControls && isTrimmed && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-4 w-4 p-0"
-                onClick={handleRestoreOriginal}
-                title="Restore original duration"
-              >
-                <RotateCcw className="h-3 w-3" />
-              </Button>
+            {showControls && (
+              <div className="flex gap-1">
+                {/* Cut instruction */}
+                {showCutIndicator && (
+                  <span className="text-[8px] text-red-500 font-medium">
+                    Click to cut
+                  </span>
+                )}
+
+                {/* Restore button */}
+                {isTrimmed && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-4 w-4 p-0"
+                    onClick={handleRestoreOriginal}
+                    title="Restore original duration"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>
