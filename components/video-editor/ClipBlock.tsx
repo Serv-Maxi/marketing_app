@@ -129,7 +129,7 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
         {...listeners}
         className={`relative h-16 rounded-md border ${colorClass} cursor-grab ${
           isDragging ? "opacity-70 shadow-lg" : ""
-        } ${isResizing ? "cursor-ew-resize" : ""}`}
+        } ${isResizing ? "cursor-ew-resize" : ""} group`}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -145,7 +145,6 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
         <div className="absolute inset-0 p-1 flex flex-col">
           {thumbnailUrl && (
             <div className="flex justify-between items-start absolute bottom-0 left-1 right-0">
-              {/* <span className="text-xs font-medium truncate">{clip.title}</span> */}
               <span className="text-[12px] font-semibold text-black relative z-10 pl-2 pb-1">
                 {(clip.endTime - clip.startTime).toFixed(1)}s
               </span>
@@ -161,8 +160,8 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
             </div>
           )}
 
-          {/* Thumbnail */}
-          <div className="rounded-md overflow-hidden">
+          {/* Thumbnail with trimming overlay */}
+          <div className="rounded-md overflow-hidden relative">
             <div
               style={
                 thumbnailUrl
@@ -183,6 +182,11 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
                 </div>
               )}
             </div>
+
+            {/* Trimming indicators */}
+            {isResizing && (
+              <div className="absolute inset-0 bg-black/20 border-2 border-primary rounded-md"></div>
+            )}
           </div>
         </div>
 
@@ -193,28 +197,36 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
           className="hidden"
           muted
           playsInline
-          onLoad={(e) => {
-            const video = e.currentTarget;
-            video.currentTime =
-              clip.startTime + (clip.endTime - clip.startTime) / 2; // Middle of the clip
-
-            console.log("Video loaded for thumbnail generation", video);
+          onLoadedData={() => {
+            if (videoRef.current) {
+              videoRef.current.currentTime =
+                clip.startTime + (clip.endTime - clip.startTime) / 2;
+            }
           }}
         />
 
-        {/* Resize handles */}
+        {/* Enhanced resize handles */}
         <div
-          className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize bg-primary/70 hover:bg-primary rounded-l flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+          className="absolute top-0 bottom-0 left-0 w-3 cursor-ew-resize bg-primary/50 hover:bg-primary/80 rounded-l flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity duration-200 z-20"
           onMouseDown={(e) => handleResizeStart(e, "start")}
+          title="Trim start"
         >
-          <div className="w-0.5 h-8 bg-white rounded"></div>
+          <div className="w-0.5 h-8 bg-white rounded shadow-sm"></div>
         </div>
         <div
-          className="absolute top-0 bottom-0 right-0 w-2 cursor-ew-resize bg-primary/70 hover:bg-primary rounded-r flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+          className="absolute top-0 bottom-0 right-0 w-3 cursor-ew-resize bg-primary/50 hover:bg-primary/80 rounded-r flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity duration-200 z-20"
           onMouseDown={(e) => handleResizeStart(e, "end")}
+          title="Trim end"
         >
-          <div className="w-0.5 h-8 bg-white rounded"></div>
+          <div className="w-0.5 h-8 bg-white rounded shadow-sm"></div>
         </div>
+
+        {/* Visual feedback during resize */}
+        {isResizing && (
+          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded pointer-events-none z-30">
+            {(clip.endTime - clip.startTime).toFixed(1)}s
+          </div>
+        )}
       </motion.div>
     </AnimatePresence>
   );
