@@ -262,7 +262,7 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
           style={style}
           {...attributes}
           {...listeners}
-          className={`relative h-16 rounded-md border ${colorClass} cursor-grab ${
+          className={`relative h-16 rounded-lg border ${colorClass} cursor-grab ${
             isDragging ? "opacity-70 shadow-lg" : ""
           } ${isResizing ? "cursor-ew-resize" : ""} ${showCutIndicator ? "cursor-crosshair" : ""} group`}
           initial={{ opacity: 0, y: 10 }}
@@ -306,9 +306,8 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
                   thumbnailUrl
                     ? {
                         backgroundImage: `url(${thumbnailUrl})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
                         backgroundRepeat: "repeat",
+                        backgroundSize: "55px",
                       }
                     : {}
                 }
@@ -346,32 +345,20 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
 
             {/* Duration and controls */}
             <div className="flex justify-between items-center mt-1">
-              <span className="text-[10px] font-semibold text-foreground">
-                {(clip.endTime - clip.startTime).toFixed(1)}s
-              </span>
-
-              {/* Control buttons - only show on hover */}
-              {showControls && (
-                <div className="flex gap-1">
-                  {/* Cut instruction */}
-                  {showCutIndicator && (
-                    <span className="text-[8px] text-red-500 font-medium">
-                      Click to cut
-                    </span>
-                  )}
-
-                  {/* Restore button */}
-                  {isTrimmed && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-4 w-4 p-0"
-                      onClick={handleRestoreOriginal}
-                      title="Restore original duration"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                    </Button>
-                  )}
+              {thumbnailUrl && (
+                <div className="flex justify-between items-start absolute bottom-0 left-1 right-0">
+                  <span className="text-[12px] font-semibold text-black relative z-10 pl-2 pb-1">
+                    {(clip.endTime - clip.startTime).toFixed(1)}s
+                  </span>
+                  <div
+                    className="absolute bottom-1 left-0 rounded-md"
+                    style={{
+                      width: "100px",
+                      height: "30px",
+                      background:
+                        "radial-gradient(100% 120% at 0% 120%, rgba(255, 255, 255, 0.8) 55%, rgba(0, 0, 0, 0))",
+                    }}
+                  ></div>
                 </div>
               )}
             </div>

@@ -14,6 +14,7 @@ export interface AudioTrack {
   startTime: number;
   endTime: number;
   duration?: number;
+  originalDuration?: number; // Store original audio duration for restoration
   title: string;
   volume: number; // 0.0 to 1.0
 }

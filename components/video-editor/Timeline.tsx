@@ -129,7 +129,7 @@ const Timeline: React.FC<TimelineProps> = ({
                 >
                   <AnimatePresence mode="popLayout">
                     <motion.div
-                      className="flex flex-row gap-2"
+                      className="flex flex-row"
                       layout
                       transition={{
                         type: "spring",

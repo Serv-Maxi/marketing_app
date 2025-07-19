@@ -16,6 +16,14 @@ interface TimelineState {
   addAudioTrack: (audioTrack: AudioTrack) => void;
   removeAudioTrack: (audioId: string) => void;
   updateAudioTrack: (audioId: string, updates: Partial<AudioTrack>) => void;
+  updateAudioTrim: (
+    audioId: string,
+    startTime: number,
+    endTime: number
+  ) => void;
+  restoreAudioOriginalDuration: (id: string) => void;
+  cutAudioTrack: (audioId: string, cutTime: number) => void;
+  duplicateAudioTrack: (audioId: string) => void;
 }
 
 export const useTimelineStore = create<TimelineState>((set) => ({
@@ -178,7 +186,15 @@ export const useTimelineStore = create<TimelineState>((set) => ({
 
   addAudioTrack: (audioTrack) =>
     set((state) => ({
-      audioTracks: [...state.audioTracks, audioTrack],
+      audioTracks: [
+        ...state.audioTracks,
+        {
+          ...audioTrack,
+          originalDuration:
+            audioTrack.originalDuration ||
+            audioTrack.endTime - audioTrack.startTime,
+        },
+      ],
     })),
 
   removeAudioTrack: (audioId) =>
@@ -192,4 +208,114 @@ export const useTimelineStore = create<TimelineState>((set) => ({
         track.id === audioId ? { ...track, ...updates } : track
       ),
     })),
+
+  updateAudioTrim: (audioId, startTime, endTime) =>
+    set((state) => ({
+      audioTracks: state.audioTracks.map((track) => {
+        if (track.id === audioId) {
+          const originalDuration =
+            track.originalDuration || track.endTime - track.startTime;
+          // Ensure trimming doesn't exceed original duration
+          const validStartTime = Math.max(
+            0,
+            Math.min(startTime, originalDuration - 0.1)
+          );
+          const validEndTime = Math.max(
+            validStartTime + 0.1,
+            Math.min(endTime, originalDuration)
+          );
+
+          return {
+            ...track,
+            startTime: validStartTime,
+            endTime: validEndTime,
+            duration: validEndTime - validStartTime,
+            originalDuration: originalDuration,
+          };
+        }
+        return track;
+      }),
+    })),
+
+  restoreAudioOriginalDuration: (id) =>
+    set((state) => ({
+      audioTracks: state.audioTracks.map((track) => {
+        if (track.id === id && track.originalDuration) {
+          return {
+            ...track,
+            startTime: 0,
+            endTime: track.originalDuration,
+            duration: track.originalDuration,
+          };
+        }
+        return track;
+      }),
+    })),
+
+  cutAudioTrack: (audioId, cutTime) =>
+    set((state) => {
+      const trackIndex = state.audioTracks.findIndex(
+        (track) => track.id === audioId
+      );
+      if (trackIndex === -1) return state;
+
+      const originalTrack = state.audioTracks[trackIndex];
+
+      // Calculate cut time relative to the track's timeline
+      const relativeTime = cutTime - originalTrack.startTime;
+
+      // Ensure cut time is within track bounds
+      if (
+        relativeTime <= 0 ||
+        relativeTime >= originalTrack.endTime - originalTrack.startTime
+      ) {
+        return state;
+      }
+
+      // Create two new tracks from the cut
+      const firstTrack: AudioTrack = {
+        ...originalTrack,
+        id: `${originalTrack.id}_part1_${Date.now()}`,
+        endTime: originalTrack.startTime + relativeTime,
+        duration: relativeTime,
+      };
+
+      const secondTrack: AudioTrack = {
+        ...originalTrack,
+        id: `${originalTrack.id}_part2_${Date.now()}`,
+        startTime: originalTrack.startTime + relativeTime,
+        duration:
+          originalTrack.endTime - originalTrack.startTime - relativeTime,
+      };
+
+      // Replace the original track with the two new tracks
+      const newAudioTracks = [...state.audioTracks];
+      newAudioTracks.splice(trackIndex, 1, firstTrack, secondTrack);
+
+      return { audioTracks: newAudioTracks };
+    }),
+
+  duplicateAudioTrack: (audioId) =>
+    set((state) => {
+      const trackIndex = state.audioTracks.findIndex(
+        (track) => track.id === audioId
+      );
+      if (trackIndex === -1) return state;
+
+      const originalTrack = state.audioTracks[trackIndex];
+
+      // Generate a better name for the duplicate
+      const timestamp = Date.now();
+      const duplicatedTrack: AudioTrack = {
+        ...originalTrack,
+        id: `${originalTrack.id}_duplicate_${timestamp}`,
+        title: `${originalTrack.title} (Copy)`,
+      };
+
+      // Insert the duplicated track right after the original track
+      const newAudioTracks = [...state.audioTracks];
+      newAudioTracks.splice(trackIndex + 1, 0, duplicatedTrack);
+
+      return { audioTracks: newAudioTracks };
+    }),
 }));
