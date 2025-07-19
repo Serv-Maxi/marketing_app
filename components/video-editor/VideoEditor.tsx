@@ -78,31 +78,31 @@ const VideoEditor = () => {
         // Process clips to get durations
         const clipsWithDurations = await Promise.all(
           sampleClipsWithTimes.map(async (clip) => {
-            // If startTime and endTime are not defined, get full video duration
+            // Get the actual video duration first
+            let actualDuration;
+            try {
+              actualDuration = await getVideoDuration(clip.src);
+            } catch {
+              actualDuration = 10; // Fallback
+            }
+
+            // If startTime and endTime are not defined, use full video duration
             if (clip.startTime === undefined || clip.endTime === undefined) {
-              try {
-                const videoDuration = await getVideoDuration(clip.src);
-                return {
-                  ...clip,
-                  startTime: 0,
-                  endTime: videoDuration,
-                  duration: videoDuration,
-                };
-              } catch {
-                return {
-                  ...clip,
-                  startTime: 0,
-                  endTime: 10, // Fallback duration
-                  duration: 10,
-                };
-              }
+              return {
+                ...clip,
+                startTime: 0,
+                endTime: actualDuration,
+                duration: actualDuration,
+                originalDuration: actualDuration, // Store original duration
+              };
             } else {
-              // Use explicit times
+              // Use explicit times but store original duration
               return {
                 ...clip,
                 startTime: clip.startTime,
                 endTime: clip.endTime,
                 duration: clip.endTime - clip.startTime,
+                originalDuration: actualDuration, // Store original duration
               };
             }
           })
@@ -117,6 +117,7 @@ const VideoEditor = () => {
           startTime: clip.startTime || 0,
           endTime: clip.endTime || 10,
           duration: (clip.endTime || 10) - (clip.startTime || 0),
+          originalDuration: 10, // Default original duration
         }));
         initializeClips(fallbackClips);
       }

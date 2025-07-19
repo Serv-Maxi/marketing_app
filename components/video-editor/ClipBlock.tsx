@@ -5,6 +5,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { Clip } from "@/lib/video-editor/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimelineStore } from "@/hooks/video-editor/useTimeline";
+import { Button } from "@/components/ui/button";
+import { RotateCcw } from "lucide-react";
 
 interface ClipBlockProps {
   clip: Clip;
@@ -22,11 +24,14 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
     isDragging,
   } = useSortable({ id: clip.id });
 
-  const { updateClipTrim } = useTimelineStore();
+  const { updateClipTrim, restoreClipOriginalDuration } = useTimelineStore();
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
   const [originalClip, setOriginalClip] = useState<Clip | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [showControls, setShowControls] = useState(false);
   const resizeStartX = useRef<number>(0);
+  const isResizingRef = useRef<"start" | "end" | null>(null);
+  const originalClipRef = useRef<Clip | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const style = {
@@ -47,6 +52,13 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
 
   const colorClass = colors[index % colors.length];
 
+  // Calculate if clip is trimmed
+  const originalDuration =
+    clip.originalDuration || clip.endTime - clip.startTime;
+  const isTrimmed = clip.startTime > 0 || clip.endTime < originalDuration;
+  const trimPercentage =
+    ((clip.endTime - clip.startTime) / originalDuration) * 100;
+
   // Generate thumbnail from video
   useEffect(() => {
     const generateThumbnail = async () => {
@@ -55,7 +67,7 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
       try {
         const video = videoRef.current;
         video.currentTime =
-          clip.startTime + (clip.endTime - clip.startTime) / 2; // Middle of the clip
+          clip.startTime + (clip.endTime - clip.startTime) / 2;
 
         video.addEventListener(
           "loadeddata",
@@ -84,8 +96,12 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
 
   const handleResizeStart = (e: React.MouseEvent, side: "start" | "end") => {
     e.stopPropagation();
+    console.log("Starting resize:", side, "for clip:", clip.id);
     setIsResizing(side);
     setOriginalClip(clip);
+    // Also store in refs for the event listeners
+    isResizingRef.current = side;
+    originalClipRef.current = clip;
     resizeStartX.current = e.clientX;
 
     document.addEventListener("mousemove", handleResizeMove);
@@ -93,31 +109,48 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
   };
 
   const handleResizeMove = (e: MouseEvent) => {
-    if (!isResizing || !originalClip) return;
+    const currentIsResizing = isResizingRef.current;
+    const currentOriginalClip = originalClipRef.current;
+
+    if (!currentIsResizing || !currentOriginalClip) {
+      return;
+    }
 
     const deltaX = e.clientX - resizeStartX.current;
     const deltaTime = deltaX / zoom;
 
-    if (isResizing === "start") {
-      const newStartTime = Math.max(0, originalClip.startTime + deltaTime);
-      const newEndTime = Math.max(newStartTime + 0.1, originalClip.endTime);
+    if (currentIsResizing === "start") {
+      const newStartTime = Math.max(
+        0,
+        currentOriginalClip.startTime + deltaTime
+      );
+      const newEndTime = Math.max(
+        newStartTime + 0.1,
+        currentOriginalClip.endTime
+      );
 
       updateClipTrim(clip.id, newStartTime, newEndTime);
     } else {
       const newEndTime = Math.max(
-        originalClip.startTime + 0.1,
-        originalClip.endTime + deltaTime
+        currentOriginalClip.startTime + 0.1,
+        currentOriginalClip.endTime + deltaTime
       );
 
-      updateClipTrim(clip.id, originalClip.startTime, newEndTime);
+      updateClipTrim(clip.id, currentOriginalClip.startTime, newEndTime);
     }
   };
 
   const handleResizeEnd = () => {
     setIsResizing(null);
     setOriginalClip(null);
+    isResizingRef.current = null;
+    originalClipRef.current = null;
     document.removeEventListener("mousemove", handleResizeMove);
     document.removeEventListener("mouseup", handleResizeEnd);
+  };
+
+  const handleRestoreOriginal = () => {
+    restoreClipOriginalDuration(clip.id);
   };
 
   return (
@@ -141,35 +174,33 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
           duration: 0.3,
           delay: isDragging ? 0 : index * 0.05,
         }}
+        onMouseEnter={() => setShowControls(true)}
+        onMouseLeave={() => setShowControls(false)}
       >
-        <div className="absolute inset-0 p-1 flex flex-col">
-          {thumbnailUrl && (
-            <div className="flex justify-between items-start absolute bottom-0 left-1 right-0">
-              <span className="text-[12px] font-semibold text-black relative z-10 pl-2 pb-1">
-                {(clip.endTime - clip.startTime).toFixed(1)}s
-              </span>
-              <div
-                className="absolute bottom-1 left-0 rounded-md"
-                style={{
-                  width: "100px",
-                  height: "30px",
-                  background:
-                    "radial-gradient(100% 120% at 0% 120%, rgba(255, 255, 255, 0.8) 55%, rgba(0, 0, 0, 0))",
-                }}
-              ></div>
-            </div>
-          )}
+        {/* Left resize handle */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-2 bg-primary/50 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          onMouseDown={(e) => handleResizeStart(e, "start")}
+        />
 
-          {/* Thumbnail with trimming overlay */}
-          <div className="rounded-md overflow-hidden relative">
+        {/* Right resize handle */}
+        <div
+          className="absolute right-0 top-0 bottom-0 w-2 bg-primary/50 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          onMouseDown={(e) => handleResizeStart(e, "end")}
+        />
+
+        <div className="absolute inset-0 p-1 flex flex-col">
+          {/* Thumbnail background */}
+          <div className="rounded-md overflow-hidden relative flex-1">
             <div
+              className="w-full h-full"
               style={
                 thumbnailUrl
                   ? {
                       backgroundImage: `url(${thumbnailUrl})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
                       backgroundRepeat: "repeat",
-                      backgroundSize: "55px",
-                      height: "55px",
                     }
                   : {}
               }
@@ -183,14 +214,38 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
               )}
             </div>
 
-            {/* Trimming indicators */}
-            {isResizing && (
-              <div className="absolute inset-0 bg-black/20 border-2 border-primary rounded-md"></div>
+            {/* Trim indicator overlay */}
+            {isTrimmed && (
+              <div className="absolute inset-0 bg-black/20 border-2 border-yellow-400 rounded">
+                <div className="absolute top-1 left-1 text-xs bg-yellow-400 text-black px-1 rounded">
+                  {trimPercentage.toFixed(0)}%
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Duration and controls */}
+          <div className="flex justify-between items-center mt-1">
+            <span className="text-[10px] font-semibold text-foreground">
+              {(clip.endTime - clip.startTime).toFixed(1)}s
+            </span>
+
+            {/* Control buttons - only show on hover */}
+            {showControls && isTrimmed && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-4 w-4 p-0"
+                onClick={handleRestoreOriginal}
+                title="Restore original duration"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
             )}
           </div>
         </div>
 
-        {/* Hidden video element for thumbnail generation */}
+        {/* Hidden video for thumbnail generation */}
         <video
           ref={videoRef}
           src={clip.src}
@@ -198,35 +253,9 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
           muted
           playsInline
           onLoadedData={() => {
-            if (videoRef.current) {
-              videoRef.current.currentTime =
-                clip.startTime + (clip.endTime - clip.startTime) / 2;
-            }
+            // Trigger thumbnail generation
           }}
         />
-
-        {/* Enhanced resize handles */}
-        <div
-          className="absolute top-0 bottom-0 left-0 w-3 cursor-ew-resize bg-primary/50 hover:bg-primary/80 rounded-l flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity duration-200 z-20"
-          onMouseDown={(e) => handleResizeStart(e, "start")}
-          title="Trim start"
-        >
-          <div className="w-0.5 h-8 bg-white rounded shadow-sm"></div>
-        </div>
-        <div
-          className="absolute top-0 bottom-0 right-0 w-3 cursor-ew-resize bg-primary/50 hover:bg-primary/80 rounded-r flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity duration-200 z-20"
-          onMouseDown={(e) => handleResizeStart(e, "end")}
-          title="Trim end"
-        >
-          <div className="w-0.5 h-8 bg-white rounded shadow-sm"></div>
-        </div>
-
-        {/* Visual feedback during resize */}
-        {isResizing && (
-          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded pointer-events-none z-30">
-            {(clip.endTime - clip.startTime).toFixed(1)}s
-          </div>
-        )}
       </motion.div>
     </AnimatePresence>
   );

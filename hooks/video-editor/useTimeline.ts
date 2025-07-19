@@ -7,6 +7,10 @@ interface TimelineState {
   initializeClips: (clips: Clip[]) => void;
   reorderClips: (oldIndex: number, newIndex: number) => void;
   updateClipTrim: (clipId: string, startTime: number, endTime: number) => void;
+  restoreClipOriginalDuration: (id: string) => void;
+  addClip: (clip: Clip) => void;
+  removeClip: (id: string) => void;
+  updateClip: (id: string, updates: Partial<Clip>) => void;
   addAudioTrack: (audioTrack: AudioTrack) => void;
   removeAudioTrack: (audioId: string) => void;
   updateAudioTrack: (audioId: string, updates: Partial<AudioTrack>) => void;
@@ -16,7 +20,14 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   clips: [],
   audioTracks: [],
 
-  initializeClips: (clips) => set({ clips }),
+  initializeClips: (clips) =>
+    set({
+      clips: clips.map((clip) => ({
+        ...clip,
+        originalDuration:
+          clip.originalDuration || clip.endTime - clip.startTime,
+      })),
+    }),
 
   reorderClips: (oldIndex, newIndex) =>
     set((state) => {
@@ -28,8 +39,77 @@ export const useTimelineStore = create<TimelineState>((set) => ({
 
   updateClipTrim: (clipId, startTime, endTime) =>
     set((state) => ({
+      clips: state.clips.map((clip) => {
+        if (clip.id === clipId) {
+          const originalDuration =
+            clip.originalDuration || clip.endTime - clip.startTime;
+          // Ensure trimming doesn't exceed original duration
+          const validStartTime = Math.max(
+            0,
+            Math.min(startTime, originalDuration - 0.1)
+          );
+          const validEndTime = Math.max(
+            validStartTime + 0.1,
+            Math.min(endTime, originalDuration)
+          );
+
+          return {
+            ...clip,
+            startTime: validStartTime,
+            endTime: validEndTime,
+            duration: validEndTime - validStartTime,
+            originalDuration: originalDuration,
+          };
+        }
+        return clip;
+      }),
+    })),
+
+  restoreClipOriginalDuration: (id) =>
+    set((state) => ({
+      clips: state.clips.map((clip) => {
+        if (clip.id === id && clip.originalDuration) {
+          return {
+            ...clip,
+            startTime: 0,
+            endTime: clip.originalDuration,
+            duration: clip.originalDuration,
+          };
+        }
+        return clip;
+      }),
+    })),
+
+  addClip: (clip) =>
+    set((state) => ({
+      clips: [
+        ...state.clips,
+        {
+          ...clip,
+          originalDuration:
+            clip.originalDuration || clip.endTime - clip.startTime,
+        },
+      ],
+    })),
+
+  removeClip: (id) =>
+    set((state) => ({
+      clips: state.clips.filter((clip) => clip.id !== id),
+    })),
+
+  updateClip: (id, updates) =>
+    set((state) => ({
       clips: state.clips.map((clip) =>
-        clip.id === clipId ? { ...clip, startTime, endTime } : clip
+        clip.id === id
+          ? {
+              ...clip,
+              ...updates,
+              duration:
+                updates.endTime && updates.startTime
+                  ? updates.endTime - updates.startTime
+                  : clip.duration,
+            }
+          : clip
       ),
     })),
 

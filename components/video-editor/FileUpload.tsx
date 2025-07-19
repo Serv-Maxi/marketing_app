@@ -13,21 +13,44 @@ interface FileUploadProps {
 const FileUpload: React.FC<FileUploadProps> = ({ onVideoAdded }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<
-    { name: string; url: string }[]
+    { name: string; url: string; file: File }[]
   >([]);
-  const { clips, initializeClips } = useTimelineStore();
+  const { addClip } = useTimelineStore();
+
+  // Helper function to get video duration
+  const getVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+
+      video.onloadedmetadata = () => {
+        resolve(video.duration);
+        URL.revokeObjectURL(video.src); // Clean up object URL
+      };
+
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src); // Clean up object URL
+        reject(new Error("Failed to load video metadata"));
+      };
+
+      video.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Helper function to generate video ID
+  const generateId = () => Math.random().toString(36).substr(2, 9);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) return;
 
       setUploading(true);
-      const newFiles: { name: string; url: string }[] = [];
+      const newFiles: { name: string; url: string; file: File }[] = [];
 
       for (const file of acceptedFiles) {
         // Create object URL for the file
         const videoUrl = URL.createObjectURL(file);
-        newFiles.push({ name: file.name, url: videoUrl });
+        newFiles.push({ name: file.name, url: videoUrl, file });
 
         // Call the callback if provided
         if (onVideoAdded) {
@@ -51,17 +74,43 @@ const FileUpload: React.FC<FileUploadProps> = ({ onVideoAdded }) => {
     multiple: true,
   });
 
-  const addVideoToTimeline = (videoUrl: string, fileName: string) => {
-    const newClip = {
-      id: Date.now().toString(),
-      src: videoUrl,
-      startTime: 0,
-      endTime: 10, // Default 10 seconds, will be updated when video loads
-      title: fileName.replace(/\.[^/.]+$/, ""), // Remove file extension
-    };
+  const addVideoToTimeline = async (
+    videoUrl: string,
+    fileName: string,
+    file?: File
+  ) => {
+    try {
+      let duration = 10; // Default fallback
 
-    initializeClips([...clips, newClip]);
-    toast.success(`Added "${fileName}" to timeline`);
+      if (file) {
+        try {
+          duration = await getVideoDuration(file);
+        } catch (error) {
+          console.warn(
+            "Could not detect video duration, using default 10s",
+            error
+          );
+        }
+      }
+
+      const newClip = {
+        id: generateId(),
+        src: videoUrl,
+        startTime: 0,
+        endTime: duration,
+        duration: duration,
+        originalDuration: duration, // Store original duration
+        title: fileName.replace(/\.[^/.]+$/, ""), // Remove file extension
+      };
+
+      addClip(newClip);
+      toast.success(
+        `Added "${fileName}" to timeline (${duration.toFixed(1)}s)`
+      );
+    } catch (error) {
+      console.error("Error adding video to timeline:", error);
+      toast.error(`Failed to add "${fileName}" to timeline`);
+    }
   };
 
   const removeFile = (index: number) => {
@@ -112,7 +161,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onVideoAdded }) => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => addVideoToTimeline(file.url, file.name)}
+                onClick={() =>
+                  addVideoToTimeline(file.url, file.name, file.file)
+                }
                 className="text-xs"
               >
                 Add to Timeline

@@ -3,7 +3,8 @@ export interface Clip {
   src: string;
   startTime: number;
   endTime: number;
-  duration?: number; // Make duration optional
+  duration: number;
+  originalDuration?: number; // Store original video duration for restoration
   title: string;
 }
 
