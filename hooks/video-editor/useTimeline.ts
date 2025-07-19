@@ -12,6 +12,7 @@ interface TimelineState {
   removeClip: (id: string) => void;
   updateClip: (id: string, updates: Partial<Clip>) => void;
   cutClip: (clipId: string, cutTime: number) => void;
+  duplicateClip: (clipId: string) => void;
   addAudioTrack: (audioTrack: AudioTrack) => void;
   removeAudioTrack: (audioId: string) => void;
   updateAudioTrack: (audioId: string, updates: Partial<AudioTrack>) => void;
@@ -150,6 +151,27 @@ export const useTimelineStore = create<TimelineState>((set) => ({
       // Replace the original clip with the two new clips
       const newClips = [...state.clips];
       newClips.splice(clipIndex, 1, firstClip, secondClip);
+
+      return { clips: newClips };
+    }),
+
+  duplicateClip: (clipId) =>
+    set((state) => {
+      const clipIndex = state.clips.findIndex((clip) => clip.id === clipId);
+      if (clipIndex === -1) return state;
+
+      const originalClip = state.clips[clipIndex];
+
+      // Generate a better name for the duplicate
+      const timestamp = Date.now();
+      const duplicatedClip: Clip = {
+        ...originalClip,
+        id: `${originalClip.id}_duplicate_${timestamp}`,
+      };
+
+      // Insert the duplicated clip right after the original clip
+      const newClips = [...state.clips];
+      newClips.splice(clipIndex + 1, 0, duplicatedClip);
 
       return { clips: newClips };
     }),

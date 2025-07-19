@@ -6,7 +6,14 @@ import { Clip } from "@/lib/video-editor/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimelineStore } from "@/hooks/video-editor/useTimeline";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Scissors } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { RotateCcw, Scissors, Trash2, Copy, Play } from "lucide-react";
 
 interface ClipBlockProps {
   clip: Clip;
@@ -24,14 +31,24 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
     isDragging,
   } = useSortable({ id: clip.id });
 
-  const { updateClipTrim, restoreClipOriginalDuration, cutClip } =
-    useTimelineStore();
+  const {
+    updateClipTrim,
+    restoreClipOriginalDuration,
+    cutClip,
+    removeClip,
+    duplicateClip,
+  } = useTimelineStore();
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
   const [originalClip, setOriginalClip] = useState<Clip | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(false);
   const [showCutIndicator, setShowCutIndicator] = useState(false);
   const [cutPosition, setCutPosition] = useState<number>(0);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({
+    x: 0,
+    y: 0,
+  });
   const resizeStartX = useRef<number>(0);
   const isResizingRef = useRef<"start" | "end" | null>(null);
   const originalClipRef = useRef<Clip | null>(null);
@@ -202,140 +219,229 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
     setShowCutIndicator(false);
   };
 
+  const handleRightClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default context menu
+    e.stopPropagation();
+
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
+    setContextMenuOpen(true);
+  };
+
+  const handleDeleteClip = () => {
+    const clipDuration = (clip.endTime - clip.startTime).toFixed(1);
+    const clipName = clip.src.split("/").pop() || "video clip";
+
+    if (
+      window.confirm(
+        `Delete "${clipName}" (${clipDuration}s)?\n\nThis action cannot be undone.`
+      )
+    ) {
+      removeClip(clip.id);
+    }
+    setContextMenuOpen(false);
+  };
+
+  const handleDuplicateClip = () => {
+    const clipName = clip.src.split("/").pop() || "video clip";
+
+    // Add visual feedback
+    console.log(`Duplicating "${clipName}"...`);
+
+    duplicateClip(clip.id);
+    setContextMenuOpen(false);
+
+    // Optional: Show a brief success notification
+    // You could add a toast notification here in the future
+  };
+
   return (
-    <AnimatePresence>
-      <motion.div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
-        className={`relative h-16 rounded-md border ${colorClass} cursor-grab ${
-          isDragging ? "opacity-70 shadow-lg" : ""
-        } ${isResizing ? "cursor-ew-resize" : ""} group`}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        layout
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 25,
-          duration: 0.3,
-          delay: isDragging ? 0 : index * 0.05,
-        }}
-        onMouseEnter={() => setShowControls(true)}
-        onMouseLeave={() => {
-          setShowControls(false);
-          handleClipMouseLeave();
-        }}
-        onMouseMove={handleClipMouseMove}
-        onClick={handleClipClick}
-      >
-        {/* Left resize handle */}
-        <div
-          className="absolute left-0 top-0 bottom-0 w-2 bg-primary/50 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
-          onMouseDown={(e) => handleResizeStart(e, "start")}
-        />
+    <>
+      <AnimatePresence>
+        <motion.div
+          ref={setNodeRef}
+          style={style}
+          {...attributes}
+          {...listeners}
+          className={`relative h-16 rounded-md border ${colorClass} cursor-grab ${
+            isDragging ? "opacity-70 shadow-lg" : ""
+          } ${isResizing ? "cursor-ew-resize" : ""} ${showCutIndicator ? "cursor-crosshair" : ""} group`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          layout
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 25,
+            duration: 0.3,
+            delay: isDragging ? 0 : index * 0.05,
+          }}
+          onMouseEnter={() => setShowControls(true)}
+          onMouseLeave={() => {
+            setShowControls(false);
+            handleClipMouseLeave();
+          }}
+          onMouseMove={handleClipMouseMove}
+          onClick={handleClipClick}
+          onContextMenu={handleRightClick}
+        >
+          {/* Left resize handle */}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-2 bg-primary/50 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            onMouseDown={(e) => handleResizeStart(e, "start")}
+          />
 
-        {/* Right resize handle */}
-        <div
-          className="absolute right-0 top-0 bottom-0 w-2 bg-primary/50 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
-          onMouseDown={(e) => handleResizeStart(e, "end")}
-        />
+          {/* Right resize handle */}
+          <div
+            className="absolute right-0 top-0 bottom-0 w-2 bg-primary/50 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            onMouseDown={(e) => handleResizeStart(e, "end")}
+          />
 
-        <div className="absolute inset-0 p-1 flex flex-col">
-          {/* Thumbnail background */}
-          <div className="rounded-md overflow-hidden relative flex-1">
-            <div
-              className="w-full h-full"
-              style={
-                thumbnailUrl
-                  ? {
-                      backgroundImage: `url(${thumbnailUrl})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      backgroundRepeat: "repeat",
-                    }
-                  : {}
-              }
-            >
-              {!thumbnailUrl && (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground">
-                    {clip.startTime.toFixed(1)}s - {clip.endTime.toFixed(1)}s
-                  </span>
+          <div className="absolute inset-0 p-1 flex flex-col">
+            {/* Thumbnail background */}
+            <div className="rounded-md overflow-hidden relative flex-1">
+              <div
+                className="w-full h-full"
+                style={
+                  thumbnailUrl
+                    ? {
+                        backgroundImage: `url(${thumbnailUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "repeat",
+                      }
+                    : {}
+                }
+              >
+                {!thumbnailUrl && (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-xs text-muted-foreground">
+                      {clip.startTime.toFixed(1)}s - {clip.endTime.toFixed(1)}s
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Trim indicator overlay */}
+              {isTrimmed && (
+                <div className="absolute inset-0 bg-black/20 border-2 border-yellow-400 rounded">
+                  <div className="absolute top-1 left-1 text-xs bg-yellow-400 text-black px-1 rounded">
+                    {trimPercentage.toFixed(0)}%
+                  </div>
+                </div>
+              )}
+
+              {/* Cut indicator line */}
+              {showCutIndicator && !isResizing && (
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-20"
+                  style={{ left: `${cutPosition}px` }}
+                >
+                  <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
+                    <Scissors className="h-3 w-3 text-red-500 bg-white rounded-full p-0.5" />
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Trim indicator overlay */}
-            {isTrimmed && (
-              <div className="absolute inset-0 bg-black/20 border-2 border-yellow-400 rounded">
-                <div className="absolute top-1 left-1 text-xs bg-yellow-400 text-black px-1 rounded">
-                  {trimPercentage.toFixed(0)}%
-                </div>
-              </div>
-            )}
+            {/* Duration and controls */}
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-[10px] font-semibold text-foreground">
+                {(clip.endTime - clip.startTime).toFixed(1)}s
+              </span>
 
-            {/* Cut indicator line */}
-            {showCutIndicator && !isResizing && (
-              <div
-                className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-20"
-                style={{ left: `${cutPosition}px` }}
+              {/* Control buttons - only show on hover */}
+              {showControls && (
+                <div className="flex gap-1">
+                  {/* Cut instruction */}
+                  {showCutIndicator && (
+                    <span className="text-[8px] text-red-500 font-medium">
+                      Click to cut
+                    </span>
+                  )}
+
+                  {/* Restore button */}
+                  {isTrimmed && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-4 w-4 p-0"
+                      onClick={handleRestoreOriginal}
+                      title="Restore original duration"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Hidden video for thumbnail generation */}
+          <video
+            ref={videoRef}
+            src={clip.src}
+            className="hidden"
+            muted
+            playsInline
+            onLoadedData={() => {
+              // Trigger thumbnail generation
+            }}
+          />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Context Menu */}
+      <DropdownMenu open={contextMenuOpen} onOpenChange={setContextMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          {/* Invisible trigger positioned at right-click location */}
+          <div
+            style={{
+              position: "fixed",
+              left: contextMenuPosition.x,
+              top: contextMenuPosition.y,
+              width: 1,
+              height: 1,
+              pointerEvents: "none",
+              zIndex: 9999,
+            }}
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-48" side="bottom" align="start">
+          <DropdownMenuItem
+            onClick={handleDeleteClip}
+            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete This Clip
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleDuplicateClip}>
+            <Copy className="mr-2 h-4 w-4" />
+            Duplicate Clip
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setContextMenuOpen(false)}>
+            <Play className="mr-2 h-4 w-4" />
+            Preview Clip
+          </DropdownMenuItem>
+          {/* Add restore option if clip is trimmed */}
+          {isTrimmed && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  restoreClipOriginalDuration(clip.id);
+                  setContextMenuOpen(false);
+                }}
               >
-                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
-                  <Scissors className="h-3 w-3 text-red-500 bg-white rounded-full p-0.5" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Duration and controls */}
-          <div className="flex justify-between items-center mt-1">
-            <span className="text-[10px] font-semibold text-foreground">
-              {(clip.endTime - clip.startTime).toFixed(1)}s
-            </span>
-
-            {/* Control buttons - only show on hover */}
-            {showControls && (
-              <div className="flex gap-1">
-                {/* Cut instruction */}
-                {showCutIndicator && (
-                  <span className="text-[8px] text-red-500 font-medium">
-                    Click to cut
-                  </span>
-                )}
-
-                {/* Restore button */}
-                {isTrimmed && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-4 w-4 p-0"
-                    onClick={handleRestoreOriginal}
-                    title="Restore original duration"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Hidden video for thumbnail generation */}
-        <video
-          ref={videoRef}
-          src={clip.src}
-          className="hidden"
-          muted
-          playsInline
-          onLoadedData={() => {
-            // Trigger thumbnail generation
-          }}
-        />
-      </motion.div>
-    </AnimatePresence>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Restore Original Duration
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 };
 
