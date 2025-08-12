@@ -197,7 +197,7 @@ const VideoEditor = () => {
           </div>
           <div className="lg:col-span-2 bg-card rounded-[24px] overflow-hidden border border-border shadow-sm flex items-center justify-center">
             <div
-              className="bg-black/90 transition-all duration-300 ease-in-out max-w-full max-h-full"
+              className="bg-black/90 transition-all duration-300 ease-in-out max-w-full max-h-[560px]"
               style={{
                 aspectRatio: aspectRatio === "16:9" ? "16/9" : "9/16",
                 width: aspectRatio === "16:9" ? "100%" : "auto",

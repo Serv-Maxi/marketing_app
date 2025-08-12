@@ -44,7 +44,6 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
   } = useTimelineStore();
   const { waveformData, isLoading } = useAudioWaveform(audioTrack.src);
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
-  const [originalTrack, setOriginalTrack] = useState<AudioTrack | null>(null);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [showCutIndicator, setShowCutIndicator] = useState(false);
@@ -56,6 +55,8 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
     y: 0,
   });
   const resizeStartX = useRef<number>(0);
+  const isResizingRef = useRef<"start" | "end" | null>(null);
+  const originalTrackRef = useRef<AudioTrack | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
 
   const style = {
@@ -68,7 +69,9 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
   const handleResizeStart = (e: React.MouseEvent, side: "start" | "end") => {
     e.stopPropagation();
     setIsResizing(side);
-    setOriginalTrack(audioTrack);
+    // Store in refs for the event listeners
+    isResizingRef.current = side;
+    originalTrackRef.current = audioTrack;
     resizeStartX.current = e.clientX;
 
     document.addEventListener("mousemove", handleResizeMove);
@@ -76,29 +79,45 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
   };
 
   const handleResizeMove = (e: MouseEvent) => {
-    if (!isResizing || !originalTrack) return;
+    const currentIsResizing = isResizingRef.current;
+    const currentOriginalTrack = originalTrackRef.current;
+
+    if (!currentIsResizing || !currentOriginalTrack) {
+      return;
+    }
 
     const deltaX = e.clientX - resizeStartX.current;
     const deltaTime = deltaX / zoom;
 
-    if (isResizing === "start") {
-      const newStartTime = Math.max(0, originalTrack.startTime + deltaTime);
-      const newEndTime = Math.max(newStartTime + 0.1, originalTrack.endTime);
+    if (currentIsResizing === "start") {
+      const newStartTime = Math.max(
+        0,
+        currentOriginalTrack.startTime + deltaTime
+      );
+      const newEndTime = Math.max(
+        newStartTime + 0.1,
+        currentOriginalTrack.endTime
+      );
 
       updateAudioTrim(audioTrack.id, newStartTime, newEndTime);
     } else {
       const newEndTime = Math.max(
-        originalTrack.startTime + 0.1,
-        originalTrack.endTime + deltaTime
+        currentOriginalTrack.startTime + 0.1,
+        currentOriginalTrack.endTime + deltaTime
       );
 
-      updateAudioTrim(audioTrack.id, originalTrack.startTime, newEndTime);
+      updateAudioTrim(
+        audioTrack.id,
+        currentOriginalTrack.startTime,
+        newEndTime
+      );
     }
   };
 
   const handleResizeEnd = () => {
     setIsResizing(null);
-    setOriginalTrack(null);
+    isResizingRef.current = null;
+    originalTrackRef.current = null;
     document.removeEventListener("mousemove", handleResizeMove);
     document.removeEventListener("mouseup", handleResizeEnd);
   };
@@ -367,17 +386,13 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
 
         {/* Resize handles */}
         <div
-          className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize bg-orange-600/70 hover:bg-orange-600 rounded-l flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+          className="absolute left-0 top-0 bottom-0 w-2 bg-orange-600/50 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
           onMouseDown={(e) => handleResizeStart(e, "start")}
-        >
-          <div className="w-0.5 h-6 bg-white rounded"></div>
-        </div>
+        />
         <div
-          className="absolute top-0 bottom-0 right-0 w-2 cursor-ew-resize bg-orange-600/70 hover:bg-orange-600 rounded-r flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+          className="absolute right-0 top-0 bottom-0 w-2 bg-orange-600/50 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
           onMouseDown={(e) => handleResizeStart(e, "end")}
-        >
-          <div className="w-0.5 h-6 bg-white rounded"></div>
-        </div>
+        />
 
         {/* Trim overlay for visual feedback */}
         {audioTrack.originalDuration &&
