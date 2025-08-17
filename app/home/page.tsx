@@ -16,7 +16,9 @@ const HomePage = () => {
         <h3 className="text-[18px] mb-[8px]">Quick Start</h3>
         <p>There are many variations of passages of Lorem Ipsum available</p>
       </div>
-      <ContentType />
+      <ContentType
+        onTypeChange={(type) => router.push(`/creation/new?type=${type}`)}
+      />
 
       <div className="mt-[48px] flex justify-between items-center">
         <h3 className="text-[18px]">Recent Folders</h3>

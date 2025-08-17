@@ -11,6 +11,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Check, EllipsisVertical } from "lucide-react";
 import Image from "next/image";
+import { formatDateShort } from "@/lib/utils";
 
 interface CreateFolderPopupProps {
   isOpen: boolean;
@@ -113,11 +114,7 @@ const CreateFolderPopup = ({
 
                   <div className="flex justify-between mt-2">
                     <span className="text-[12px]">
-                      {new Date().toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      {formatDateShort(new Date())}
                     </span>
                     <EllipsisVertical width={18} />
                   </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { creationService } from "@/services/database";
 import { Database } from "@/lib/database.types";
-import { ListCreation } from "../custom/list-creation";
+import { ListCreation } from "@/components/custom/list-creation";
 
 type Creation = Database["public"]["Tables"]["contents"]["Row"];
 
@@ -19,7 +19,7 @@ export const RecentCreation = () => {
       setLoading(true);
       setError(null);
       try {
-        const userCreations = await creationService.getRecentCreations();
+        const userCreations = await creationService.getCreations();
         setCreations(userCreations);
       } catch (error) {
         console.error("Error fetching recent creations:", error);

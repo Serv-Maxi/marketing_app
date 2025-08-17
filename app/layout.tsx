@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import Header from "@/components/shared/header";
 
 // Using Inter as it's the closest to MD Sans design principles
 const dmsans = DM_Sans({
@@ -30,7 +31,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main>{children}</main>
+          <Header />
+          <main className="pt-[70px]">{children}</main>
         </ThemeProvider>
       </body>
     </html>

@@ -1,9 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { UseFormRegister, FieldValues } from "react-hook-form";
+import { UseFormRegister } from "react-hook-form";
+import { FormData } from "@/types/form";
 
 interface MarketingFocusSectionProps {
-  register: UseFormRegister<FieldValues>;
+  register: UseFormRegister<FormData>;
 }
 
 const MarketingFocusSection = ({ register }: MarketingFocusSectionProps) => {
@@ -16,7 +17,7 @@ const MarketingFocusSection = ({ register }: MarketingFocusSectionProps) => {
         <div className="space-y-2">
           <label className="text-sm font-medium">Value Proposition</label>
           <Input
-            {...register("valueProposition")}
+            {...register("value_proposition")}
             className="rounded-[12px]"
             placeholder="What value do you provide to customers?"
           />
@@ -28,7 +29,7 @@ const MarketingFocusSection = ({ register }: MarketingFocusSectionProps) => {
             Unique Selling Point (USP)
           </label>
           <Input
-            {...register("uniqueSellingPoint")}
+            {...register("selling_point")}
             className="rounded-[12px]"
             placeholder="What makes you different from competitors?"
           />
@@ -38,7 +39,7 @@ const MarketingFocusSection = ({ register }: MarketingFocusSectionProps) => {
         <div className="space-y-2">
           <label className="text-sm font-medium">Selling Features</label>
           <Input
-            {...register("sellingFeatures")}
+            {...register("selling_features")}
             className="rounded-[12px]"
             placeholder="Specific features to highlight"
           />
@@ -48,7 +49,7 @@ const MarketingFocusSection = ({ register }: MarketingFocusSectionProps) => {
         <div className="space-y-2">
           <label className="text-sm font-medium">Call-to-Action</label>
           <Input
-            {...register("callToAction")}
+            {...register("cta")}
             className="rounded-[12px]"
             placeholder="E.g., Visit our site, Comment below"
           />

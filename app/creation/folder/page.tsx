@@ -4,6 +4,7 @@ import { useState } from "react";
 import CreateFolderPopup from "./_components/CreateFolderPopup";
 import DefaultFolders from "@/components/shared/default-folders";
 import { RecentCreation } from "@/components/shared/recent-creation";
+import { Creations } from "@/components/shared/creations";
 
 const HomePage = () => {
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
@@ -27,7 +28,7 @@ const HomePage = () => {
       <div className="mb-[24px] mt-[48px]">
         <h3 className="text-[18px]">Your latest generate</h3>
       </div>
-      <RecentCreation />
+      <Creations />
 
       {/* Create Folder Popup */}
       <CreateFolderPopup

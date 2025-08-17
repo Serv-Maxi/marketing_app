@@ -4,12 +4,12 @@ import { Monitor, Smartphone } from "lucide-react";
 
 interface ImageSettingsSectionProps {
   selectedImageResolution: string;
-  toggleImageResolution: (resolution: string) => void;
+  toogleAspectRatio: (resolution: string) => void;
 }
 
 const ImageSettingsSection = ({
   selectedImageResolution,
-  toggleImageResolution,
+  toogleAspectRatio,
 }: ImageSettingsSectionProps) => {
   return (
     <Card className="p-[24px] bg-white rounded-[24px] shadow-none">
@@ -29,7 +29,7 @@ const ImageSettingsSection = ({
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-gray-100"
               }`}
-              onClick={() => toggleImageResolution("16:9")}
+              onClick={() => toogleAspectRatio("16:9")}
             >
               <Monitor className="w-4 h-4" />
               16:9
@@ -43,7 +43,7 @@ const ImageSettingsSection = ({
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-gray-100"
               }`}
-              onClick={() => toggleImageResolution("9:16")}
+              onClick={() => toogleAspectRatio("9:16")}
             >
               <Smartphone className="w-4 h-4" />
               9:16

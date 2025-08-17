@@ -61,7 +61,7 @@
   --accent: #f1f5f9;
   --accent-foreground: oklch(0.145 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: #e2e8f0;
+  --border: #cfcfcf;
   --input: #cfcfcf;
   --ring: #9e2ab2;
   --chart-1: oklch(0.646 0.222 41.116);
@@ -163,4 +163,13 @@ h6 {
 
 .container {
   max-width: 1440px;
+}
+
+input,
+textarea,
+option,
+select,
+button[role="combobox"] {
+  border-color: #e8e8e8;
+  border-width: 0.5px;
 }

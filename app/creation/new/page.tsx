@@ -1,175 +1,209 @@
 "use client";
-import ContentType, {
-  ContentType as ContentTypeEnum,
-} from "@/components/shared/content-type";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePlatforms } from "@/hooks/usePlatforms";
+import { FormData as FormType } from "@/types/form";
+import AuthWrapper from "@/components/auth/AuthWrapper";
 
 // Import components
 import MainPromptSection from "./_components/MainPromptSection";
-import VideoSettingsSection from "./_components/VideoSettingsSection";
-import ImageSettingsSection from "./_components/ImageSettingsSection";
 import BasicsSection from "./_components/BasicsSection";
 import MarketingFocusSection from "./_components/MarketingFocusSection";
 import StyleOptimizationSection from "./_components/StyleOptimizationSection";
 import FoldersSection from "./_components/FoldersSection";
-import SubmitButton from "./_components/SubmitButton";
-
-interface FormData {
-  contentType: ContentTypeEnum;
-  mainPrompt: string;
-  platforms: string[];
-  targetAudience: string;
-  campaignGoal: string;
-  headline: boolean;
-  valueProposition: string;
-  uniqueSellingPoint: string;
-  sellingFeatures: string;
-  callToAction: string;
-  includeEmojis: boolean;
-  toneOfVoice: string;
-  language: string;
-  folder: string;
-  // Video specific fields
-  videoResolution: string;
-  videoLength: string;
-  captions: boolean;
-  // Image specific fields
-  imageResolution: string;
-}
+import { Button } from "@/components/ui/button";
+import AspectRatio from "./_components/VideoSettingsSection";
+import { TasksService } from "@/services/database";
+import { isAxiosError } from "axios";
+import { ContentType } from "@/types/global";
+import ContentTypeComponent from "@/components/shared/content-type";
+import Generating from "@/components/shared/generating";
+import { useSearchParams } from "next/navigation";
 
 const HomePage = () => {
-  const [selectedContentType, setSelectedContentType] =
-    useState<ContentTypeEnum>("TEXT");
-  const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const typeFromUrl = searchParams.get("type") as ContentType | null;
 
-  const { control, register, handleSubmit, setValue } = useForm<FormData>({
+  const [selectedContentType, setSelectedContentType] =
+    useState<ContentType>("Text");
+  const { platforms, isLoading: platformsLoading } = usePlatforms();
+
+  const { control, register, handleSubmit, setValue } = useForm<FormType>({
     defaultValues: {
-      contentType: "TEXT",
-      mainPrompt: "",
+      type: "Text",
+      prompt: "",
       platforms: [],
-      targetAudience: "",
-      campaignGoal: "",
-      headline: false,
-      valueProposition: "",
-      uniqueSellingPoint: "",
-      sellingFeatures: "",
-      callToAction: "",
-      includeEmojis: false,
-      toneOfVoice: "",
+      audience: "",
+      campaign_goal: "",
+      value_proposition: "",
+      selling_point: "",
+      selling_features: "",
+      cta: "",
+      use_emoji: false,
+      tone: "",
       language: "",
-      folder: "",
-      // Video specific fields
-      videoResolution: "",
-      videoLength: "",
-      captions: false,
-      // Image specific fields
-      imageResolution: "",
+      folder_id: "",
+      aspect_ratio: "",
     },
   });
 
+  type StateStatus = {
+    status: "idle" | "loading" | "success" | "error";
+    data: Array<{ id: string }>;
+    error: string;
+  };
+
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
-  const [selectedVideoResolution, setSelectedVideoResolution] =
-    useState<string>("");
-  const [selectedImageResolution, setSelectedImageResolution] =
-    useState<string>("");
+  const [selectRatio, setSelectRatio] = useState<string>("");
+  const [creationState, setCreationState] = useState<StateStatus>({
+    status: "idle",
+    data: [],
+    error: "",
+  });
 
-  const platforms = [
-    { id: "facebook", name: "Facebook", icon: "/icons/folder-facebook.svg" },
-    { id: "instagram", name: "Instagram", icon: "/icons/folder-instagram.svg" },
-    { id: "linkedin", name: "LinkedIn", icon: "/icons/folder-linkedin.svg" },
-    { id: "x", name: "X", icon: "/icons/folder-x.svg" },
-    { id: "website", name: "Website", icon: "/icons/folder-website.svg" },
-  ];
-
-  const togglePlatform = (platformId: string) => {
-    const updatedPlatforms = selectedPlatforms.includes(platformId)
-      ? selectedPlatforms.filter((id) => id !== platformId)
-      : [...selectedPlatforms, platformId];
+  const togglePlatform = (platformSlug: string) => {
+    const updatedPlatforms = selectedPlatforms.includes(platformSlug)
+      ? selectedPlatforms.filter((slug) => slug !== platformSlug)
+      : [...selectedPlatforms, platformSlug];
 
     setSelectedPlatforms(updatedPlatforms);
     setValue("platforms", updatedPlatforms);
   };
 
-  const handleContentTypeChange = (type: ContentTypeEnum) => {
+  const handleContentTypeChange = (type: ContentType) => {
     setSelectedContentType(type);
-    setValue("contentType", type);
+    setValue("type", type);
   };
 
-  const toggleVideoResolution = (resolution: string) => {
-    const newResolution =
-      selectedVideoResolution === resolution ? "" : resolution;
-    setSelectedVideoResolution(newResolution);
-    setValue("videoResolution", newResolution);
+  const toogleAspectRatio = (resolution: string) => {
+    const newResolution = selectRatio === resolution ? "" : resolution;
+    setSelectRatio(newResolution);
+    setValue("aspect_ratio", newResolution);
   };
 
-  const toggleImageResolution = (resolution: string) => {
-    const newResolution =
-      selectedImageResolution === resolution ? "" : resolution;
-    setSelectedImageResolution(newResolution);
-    setValue("imageResolution", newResolution);
+  const onSubmit = async (data: FormType) => {
+    setCreationState({ status: "loading", data: [], error: "" });
+
+    try {
+      const payload = data;
+      delete payload?.aspect_ratio;
+
+      const creation = await TasksService.createTask([
+        {
+          ...payload,
+          status: "On Queue",
+          company_id: "8e8f7cfc-c5f4-4a33-a245-8dd695e2cfc7",
+        },
+      ]);
+      console.log("Creation response:", creation);
+      if (creation) {
+        setCreationState({
+          status: "success",
+          data: Array.isArray(creation) ? creation : [creation],
+          error: "",
+        });
+      }
+    } catch (error) {
+      if (isAxiosError(error)) {
+        setCreationState({ status: "error", data: [], error: error.message });
+      }
+    } finally {
+      // Don't reset state immediately - let the real-time updates handle it
+      // setCreationState({ status: "idle", data: null });
+    }
   };
+  useEffect(() => {
+    if (typeFromUrl) {
+      setSelectedContentType(typeFromUrl);
+    }
+  }, [typeFromUrl]);
 
-  const onSubmit = async (data: FormData) => {
-    setIsLoading(true);
-    console.log("Form data:", data);
+  const taskId = creationState.data?.[0]?.id;
+  if (creationState.status === "success" && taskId) {
+    return (
+      <Generating
+        taskId={taskId as string}
+        selectedContentType={selectedContentType}
+      />
+    );
+  }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setIsLoading(false);
-    // Handle successful submission (e.g., redirect to results page)
-  };
-
+  // Show error state
+  if (creationState.status === "error") {
+    return (
+      <div className="container mx-auto p-8 bg-background">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto mt-20">
+          <h2 className="text-red-800 font-semibold mb-2">
+            Error Creating Task
+          </h2>
+          <p className="text-red-600 text-sm">
+            {creationState.error as string}
+          </p>
+          <Button
+            onClick={() =>
+              setCreationState({ status: "idle", error: "", data: [] })
+            }
+            className="mt-4"
+            variant="outline"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="container mx-auto p-8 bg-background">
-      <ContentType
+      <ContentTypeComponent
         selectedType={selectedContentType}
         onTypeChange={handleContentTypeChange}
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 mt-[24px]">
-        {/* Main Prompt Section */}
         <MainPromptSection register={register} />
 
-        {/* Conditional Sections Based on Content Type */}
-        {selectedContentType === "VIDEO" && (
-          <VideoSettingsSection
-            control={control}
-            selectedVideoResolution={selectedVideoResolution}
-            toggleVideoResolution={toggleVideoResolution}
-          />
-        )}
+        {selectedContentType === "Video" ||
+          (selectedContentType === "Image" && (
+            <AspectRatio
+              selectRatio={selectRatio}
+              toogleAspectRatio={toogleAspectRatio}
+            />
+          ))}
 
-        {selectedContentType === "IMAGE" && (
-          <ImageSettingsSection
-            selectedImageResolution={selectedImageResolution}
-            toggleImageResolution={toggleImageResolution}
-          />
-        )}
-
-        {/* Basics Section */}
         <BasicsSection
           control={control}
           platforms={platforms}
           selectedPlatforms={selectedPlatforms}
           togglePlatform={togglePlatform}
+          isLoading={platformsLoading}
         />
 
-        {/* Marketing Focus Section */}
         <MarketingFocusSection register={register} />
 
-        {/* Style & Optimization Section */}
         <StyleOptimizationSection control={control} />
 
-        {/* Folders Section */}
         <FoldersSection control={control} />
 
-        {/* Submit Button */}
-        <SubmitButton isLoading={isLoading} />
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            disabled={false} // Form only shows when idle, so never disabled
+            className="text-secondary-foreground px-8 py-3 rounded-[12px]"
+          >
+            Create Content
+          </Button>
+        </div>
       </form>
     </div>
   );
 };
 
-export default HomePage;
+const WrappedHomePage = () => {
+  return (
+    <AuthWrapper>
+      <HomePage />
+    </AuthWrapper>
+  );
+};
+
+export default WrappedHomePage;

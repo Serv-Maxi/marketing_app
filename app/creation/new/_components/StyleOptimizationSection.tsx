@@ -7,10 +7,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Controller, Control, FieldValues } from "react-hook-form";
+import { Controller, Control } from "react-hook-form";
+import { FormData } from "@/types/form";
 
 interface StyleOptimizationSectionProps {
-  control: Control<FieldValues>;
+  control: Control<FormData>;
 }
 
 const StyleOptimizationSection = ({
@@ -25,7 +26,7 @@ const StyleOptimizationSection = ({
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium">Include Emojis</label>
           <Controller
-            name="includeEmojis"
+            name="use_emoji"
             control={control}
             render={({ field }) => (
               <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -37,7 +38,7 @@ const StyleOptimizationSection = ({
         <div className="space-y-2">
           <label className="text-sm font-medium">Tone of Voice</label>
           <Controller
-            name="toneOfVoice"
+            name="tone"
             control={control}
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>

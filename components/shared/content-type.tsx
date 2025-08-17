@@ -1,30 +1,32 @@
 "use client";
 import Image from "next/image";
 import { Card } from "../ui/card";
-
-export type ContentType = "TEXT" | "IMAGE" | "VIDEO";
+import { ContentType } from "@/types/global";
 
 interface ContentTypeProps {
-  selectedType: ContentType;
+  selectedType?: ContentType;
   onTypeChange: (type: ContentType) => void;
 }
 
-const ContentType = ({ selectedType, onTypeChange }: ContentTypeProps) => {
+const ContentTypeComponent = ({
+  selectedType,
+  onTypeChange,
+}: ContentTypeProps) => {
   const contentTypes = [
     {
-      id: "TEXT" as ContentType,
+      id: "Text" as ContentType,
       title: "Text",
       description: "Create your text creation",
       icon: "/icons/type-text.svg",
     },
     {
-      id: "IMAGE" as ContentType,
+      id: "Image" as ContentType,
       title: "Image",
       description: "Create your image creation",
       icon: "/icons/type-image.svg",
     },
     {
-      id: "VIDEO" as ContentType,
+      id: "Video" as ContentType,
       title: "Video",
       description: "Create your video creation",
       icon: "/icons/type-video.svg",
@@ -36,9 +38,9 @@ const ContentType = ({ selectedType, onTypeChange }: ContentTypeProps) => {
       {contentTypes.map((type) => (
         <Card
           key={type.id}
-          className={`shadow-none flex items-center py-[24px] rounded-[18px] gap-[8px] h-[74px] p-[10px] cursor-pointer transition-all border-[1.5px] hover:border-primary hover:border-[1.5px] ${
+          className={`shadow-none flex border-none items-center py-[24px] rounded-[18px] gap-[8px] h-[74px] p-[10px] cursor-pointer transition-all border-[1px] hover:border-primary hover:border-[1px] ${
             selectedType === type.id
-              ? "ring-2 ring-primary bg-primary/5"
+              ? "ring-1 ring-primary bg-primary/5"
               : "hover:ring-1 hover:ring-gray-200"
           }`}
           onClick={() => onTypeChange(type.id)}
@@ -62,4 +64,4 @@ const ContentType = ({ selectedType, onTypeChange }: ContentTypeProps) => {
   );
 };
 
-export default ContentType;
+export default ContentTypeComponent;
