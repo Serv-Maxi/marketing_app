@@ -37,7 +37,7 @@ const HomePage = () => {
       <div className="mb-[24px] mt-[48px]">
         <h3 className="text-[18px]">Filter Folder</h3>
       </div>
-      <ContentType selectedType="TEXT" onTypeChange={() => {}} />
+      <ContentType onTypeChange={() => {}} />
 
       <div className="mb-[24px] mt-[48px] flex justify-between items-center">
         <h3 className="text-[18px]">Your latest generate</h3>
@@ -49,7 +49,6 @@ const HomePage = () => {
       <CreateFolderPopup
         isOpen={isCreateFolderOpen}
         onClose={() => setIsCreateFolderOpen(false)}
-        onSave={handleCreateFolder}
       />
     </div>
   );

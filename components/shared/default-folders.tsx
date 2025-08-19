@@ -9,11 +9,12 @@ import { folderService } from "@/services/database";
 import { Database } from "@/lib/database.types";
 import { formatDateShort } from "@/lib/utils";
 import FolderCard from "../custom/folder-card";
+import CreateFolderPopup from "@/app/creation/folder/_components/CreateFolderPopup";
 
 type Folder = Database["public"]["Tables"]["folders"]["Row"];
 
 // Default folder templates for new users
-const DEFAULT_FOLDER_TEMPLATES = [
+export const DEFAULT_FOLDER_TEMPLATES = [
   {
     title: "Youtube",
     icon: "/icons/folder-youtube.svg",
@@ -51,40 +52,39 @@ const DEFAULT_FOLDER_TEMPLATES = [
   },
 ];
 
-const DefaultFolders = () => {
+const DefaultFolders = ({ limit }: { limit: number }) => {
   const router = useRouter();
   const { user } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+
+  const fetchFolders = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const userFolders = await folderService.getFolders(limit);
+      setFolders(userFolders);
+    } catch (error) {
+      console.error("Error fetching folders:", error);
+      setError("Failed to load folders. Please try again.");
+      setFolders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchFolders = async () => {
-      if (!user?.id) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-      try {
-        const userFolders = await folderService.getFolders();
-        setFolders(userFolders);
-      } catch (error) {
-        console.error("Error fetching folders:", error);
-        setError("Failed to load folders. Please try again.");
-        setFolders([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchFolders();
   }, [user?.id]);
 
-  const handleCreateNew = () => {
-    router.push("/creation/new");
-  };
+  const handleCreateNew = () => setIsCreateFolderOpen(true);
 
   const handleFolderClick = (folderId: string) => {
     router.push(`/creation/folder/${folderId}`);
@@ -221,7 +221,8 @@ const DefaultFolders = () => {
           title: folder.name,
           date: formatDateShort(folder.created_at),
           total: folder.creation_count,
-          icon: template?.icon || "/icons/folder-website.svg",
+          icon: template?.icon || "/icons/folder.svg",
+          color: folder.color || "#F6F8FA",
         };
 
         return (
@@ -230,6 +231,13 @@ const DefaultFolders = () => {
           </div>
         );
       })}
+
+      {/* Create Folder Popup */}
+      <CreateFolderPopup
+        isOpen={isCreateFolderOpen}
+        onClose={() => setIsCreateFolderOpen(false)}
+        onSuccess={() => fetchFolders()}
+      />
     </div>
   );
 };

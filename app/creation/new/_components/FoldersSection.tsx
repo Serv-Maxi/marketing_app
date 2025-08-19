@@ -7,12 +7,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Folder } from "lucide-react";
-import { Controller, Control } from "react-hook-form";
+import { Controller, Control, useWatch } from "react-hook-form";
 import { FormData } from "@/types/form";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { folderService } from "@/services/database";
 import { Database } from "@/lib/database.types";
+import Image from "next/image";
+import { DEFAULT_FOLDER_TEMPLATES } from "@/components/shared/default-folders";
+import { cn } from "@/lib/utils";
 
 interface FoldersSectionProps {
   control: Control<FormData>;
@@ -25,6 +28,14 @@ const FoldersSection = ({ control }: FoldersSectionProps) => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Watch the folder_id value to ensure the component re-renders when it changes
+  const folderId = useWatch({
+    control,
+    name: "folder_id",
+  });
+
+  console.log("folderId =>", folderId);
 
   useEffect(() => {
     const fetchFolders = async () => {
@@ -62,8 +73,17 @@ const FoldersSection = ({ control }: FoldersSectionProps) => {
             name="folder_id"
             control={control}
             render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger className="rounded-[12px]">
+              <Select
+                onValueChange={field.onChange}
+                value={field.value || ""}
+                defaultValue={field.value || ""}
+              >
+                <SelectTrigger
+                  className={cn(
+                    "rounded-[12px]",
+                    field.value ? "!border-2 !border-primary" : ""
+                  )}
+                >
                   <SelectValue placeholder="Select folder" />
                 </SelectTrigger>
                 <SelectContent>
@@ -75,9 +95,33 @@ const FoldersSection = ({ control }: FoldersSectionProps) => {
                     <div className="p-2 text-sm text-red-500">{error}</div>
                   ) : folders.length > 0 ? (
                     folders.map((folder) => (
-                      <SelectItem key={folder.id} value={folder.id}>
+                      <SelectItem
+                        key={folder.id}
+                        value={folder.id}
+                        className="h-[50px]"
+                      >
                         <div className="flex items-center gap-2">
-                          <Folder className="w-4 h-4" />
+                          <div
+                            className="rounded-[8px] p-[5px]"
+                            style={{
+                              backgroundColor: folder.color
+                                ? folder.color
+                                : "#F6F8FA",
+                            }}
+                          >
+                            <Image
+                              src={
+                                DEFAULT_FOLDER_TEMPLATES.find(
+                                  (t) =>
+                                    t.title?.toLocaleLowerCase() ===
+                                    folder.name.toLocaleLowerCase()
+                                )?.icon ?? "/icons/folder.svg"
+                              }
+                              alt="Folder Icon"
+                              width={16}
+                              height={16}
+                            />
+                          </div>
                           {folder.name}
                         </div>
                       </SelectItem>

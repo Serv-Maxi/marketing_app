@@ -1,13 +1,14 @@
 import { supabase } from "@/lib/supabase";
 import { Database } from "@/lib/database.types";
 import { groupByDate, GroupedByDate } from "@/lib/grouping";
+import { ContentType } from "@/types/global";
 
 type Tables = Database["public"]["Tables"];
 type Platform = Tables["platforms"]["Row"];
-type Folder = Tables["folders"]["Row"];
+export type Folder = Tables["folders"]["Row"];
 export type Creation = Tables["contents"]["Row"];
-type CreationResult = Tables["creation_results"]["Row"];
-type Task = Tables["tasks"]["Row"];
+export type CreationResult = Tables["creation_results"]["Row"];
+export type Task = Tables["tasks"]["Row"];
 
 // Platform Service
 export const platformService = {
@@ -41,11 +42,12 @@ export const platformService = {
 // Folder Service
 export const folderService = {
   // Get all folders for a user
-  async getFolders(): Promise<Folder[]> {
+  async getFolders(limit: number): Promise<Folder[]> {
     const { data, error } = await supabase
       .from("folders")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(limit || 100);
 
     if (error) throw error;
     return data || [];
@@ -111,20 +113,30 @@ export const creationService = {
   // Get all creations for a user
   async getCreations(
     folderId?: string,
-    searchQuery?: string
-  ): Promise<Creation[]> {
+    searchQuery?: string,
+    selectedType?: ContentType | null
+  ): Promise<Task[]> {
     let query = supabase
-      .from("contents")
-      .select("*")
+      .from("tasks")
+      .select(
+        `
+        *,
+        creations:contents(*)
+      `
+      )
       .order("created_at", { ascending: false });
 
     if (folderId) {
       query = query.eq("folder_id", folderId);
     }
 
+    if (selectedType) {
+      query = query.eq("type", selectedType);
+    }
+
     if (searchQuery && searchQuery.trim()) {
       // Search across title, description, and content fields
-      query = query.or(`title.ilike.%${searchQuery}%`);
+      query = query.or(`prompt.ilike.%${searchQuery}%`);
     }
 
     const { data, error } = await query;
@@ -151,9 +163,14 @@ export const creationService = {
   async getCreationsGroupedByDate(
     folderId?: string,
     formatType: "friendly" | "short" | "full" = "friendly",
-    searchQuery?: string
-  ): Promise<GroupedByDate<Creation>[]> {
-    const creations = await this.getCreations(folderId, searchQuery);
+    searchQuery?: string,
+    selectedType?: ContentType | null
+  ): Promise<GroupedByDate<Task>[]> {
+    const creations = await this.getCreations(
+      folderId,
+      searchQuery,
+      selectedType
+    );
     return groupByDate(creations, formatType);
   },
 
@@ -173,9 +190,7 @@ export const creationService = {
     return data;
   },
 
-  // Get creation by ID with results and task
   async getCreationWithResults(id: string): Promise<Creation[]> {
-    // Fetch creation with related task data
     const { data: creation, error: creationError } = await supabase
       .from("contents")
       .select(
@@ -197,11 +212,14 @@ export const creationService = {
 
     if (error) throw error;
   },
+  async regenerateContent(id: string) {
+    return await supabase.rpc("regenerate_content", {
+      content_id: id,
+    });
+  },
 };
 
-// Tasks Service
 export const TasksService = {
-  // Get all tasks for a user
   async getTasks(userId: string): Promise<Task[]> {
     const { data, error } = await supabase
       .from("tasks")
@@ -229,7 +247,7 @@ export const TasksService = {
   },
 
   // Create a new task
-  async createTask(task: Tables["tasks"]["Insert"][]): Promise<Task> {
+  async createTask(task: Task[]): Promise<Task[]> {
     const { data, error } = await supabase.from("tasks").insert(task).select();
     if (error) throw error;
     return data;
@@ -280,6 +298,23 @@ export const TasksService = {
       .from("tasks")
       .select("*")
       .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Get recent tasks with related creations
+  async getRecentTasksWithCreations(): Promise<Task[]> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select(
+        `
+        *,
+        creations:contents(*)
+      `
+      )
       .order("created_at", { ascending: false })
       .limit(10);
 

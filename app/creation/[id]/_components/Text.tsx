@@ -5,8 +5,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Creation } from "@/services/database";
+import { Spinner } from "@/components/ui/shadcn-io/spinner";
+import { Creation, creationService } from "@/services/database";
 import { ChevronLeft, ChevronRight, Copy, Edit, RotateCcw } from "lucide-react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 
@@ -15,6 +17,19 @@ interface TextContent {
   navigateVariation: (val: string, arg: "prev" | "next") => void;
 }
 const TextContent = ({ creation, navigateVariation }: TextContent) => {
+  const [isRegenerate, setIsRegenerate] = useState(false);
+
+  const handleRegenerate = async (id: string) => {
+    try {
+      setIsRegenerate(true);
+      await creationService.regenerateContent(id);
+    } catch {
+      console.log("Regenerate Error");
+    } finally {
+      setIsRegenerate(false);
+    }
+  };
+
   return (
     <Accordion type="single" collapsible className="space-y-4">
       {creation.map((result) => (
@@ -74,8 +89,13 @@ const TextContent = ({ creation, navigateVariation }: TextContent) => {
                     size="sm"
                     variant="ghost"
                     className="text-primary text-[20px]"
+                    onClick={() => handleRegenerate(result.id)}
                   >
-                    <RotateCcw className="w-[24px] h-[24px]" />
+                    {isRegenerate ? (
+                      <Spinner variant="circle" />
+                    ) : (
+                      <RotateCcw className="w-[24px] h-[24px]" />
+                    )}
                   </Button>
                 </div>
               </div>

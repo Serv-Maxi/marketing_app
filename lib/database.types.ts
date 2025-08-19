@@ -74,11 +74,9 @@ export interface Database {
           id?: string;
           name: string;
           color: string;
-          user_id: string;
-          creation_count?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
+          icon?: string;
+          company_id?: string;
+        }[];
         Update: {
           id?: string;
           name?: string;
@@ -106,6 +104,7 @@ export interface Database {
           video_url: string;
           created_at: string;
           task: {
+            aspect_ratio?: string;
             type: ContentType;
           };
         };
@@ -161,8 +160,9 @@ export interface Database {
       };
       tasks: {
         Row: {
-          id: string;
+          id?: string;
           type: ContentType;
+          company_id: string;
           prompt: string;
           platforms: string[];
           audience: string;
@@ -174,11 +174,11 @@ export interface Database {
           use_emoji: boolean;
           tone: string;
           language: string;
-          folder: string;
-          aspect_ratio: string;
+          folder_id: string;
+          aspect_ratio?: string;
           status: GenerateStatus;
-          created_at: string;
-          updated_at: string;
+          created_at?: string;
+          updated_at?: string;
         };
         Insert: {
           id?: string;
@@ -199,7 +199,7 @@ export interface Database {
           status: GenerateStatus;
           created_at?: string;
           updated_at?: string;
-        };
+        }[];
         Update: {
           id?: string;
           user_id?: string;

@@ -8,13 +8,19 @@ interface FolderCard {
     title: string;
     total: number;
     date: string;
+    color: string;
   };
 }
 const FolderCard = ({ folder }: FolderCard) => {
   return (
-    <Card className="h-[200px] rounded-[16px] shadow-none border-[1.5px] hover:border-primary">
+    <Card className="h-[200px] rounded-[16px] shadow-none border-[1px] border-[#F2F4F3] hover:border-primary cursor-pointer">
       <CardContent className="p-[18px] flex flex-col justify-between h-full">
-        <div className="bg-background w-[65px] h-[65px] rounded-[12px] flex items-center justify-center">
+        <div
+          className="w-[65px] h-[65px] rounded-[12px] flex items-center justify-center"
+          style={{
+            backgroundColor: folder.color,
+          }}
+        >
           <Image src={folder.icon} width={36} height={29} alt="" />
         </div>
         <div>

@@ -3,34 +3,30 @@
 import Image from "next/image";
 import { useTaskRealtimeStatus } from "@/hooks/useTaskRealtimeStatus";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ContentType } from "@/types/global";
+import { useParams, useRouter } from "next/navigation";
 import { TasksService } from "@/services/database";
+import { CheckCircle } from "lucide-react";
 
-interface GeneratingProps {
-  taskId?: string;
-  contentId?: string;
-  selectedContentType: ContentType;
-}
+const Generating = () => {
+  const params = useParams();
+  const taskId = params.taskId as string;
 
-const Generating = ({ taskId }: GeneratingProps) => {
   const router = useRouter();
   const [progress, setProgress] = useState(15);
-  const [statusMessage, setStatusMessage] = useState("Initializing...");
-
-  const [taskStatus, setTaskStatus] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState("Generating...");
 
   // Fetch task status
   useEffect(() => {
     const fetchData = async () => {
       if (!taskId) return;
       try {
-        // Simple task fetch by I
         const task = await TasksService.getTaskById(taskId as string);
-        console.log("Fetched task:", task);
 
         if (task) {
-          setTaskStatus(task.status);
+          if (task.status === "Finished") {
+            return router.push(`/creation/${taskId}`);
+          }
+          setStatusMessage("Task is still in progress...");
         }
       } catch (error) {
         console.log(error);
@@ -40,17 +36,19 @@ const Generating = ({ taskId }: GeneratingProps) => {
     fetchData();
   }, [taskId]);
 
-  // if the status is "On Queue", subscribe to realtime updates to receive the update
-  console.log(taskStatus, taskId);
   useTaskRealtimeStatus({
     id: taskId || "",
     execute: true,
     onTimeUpdate: (payload) => {
-      console.log(payload);
       if (payload.eventType === "UPDATE") {
-        setProgress(100);
-        setStatusMessage("Content generated successfully!");
-        router.push(`/creation/${taskId}`);
+        if (payload.new.status === "On Progress") {
+          setStatusMessage("Content is being generated...");
+        }
+        if (payload.new.status === "Finished") {
+          setProgress(100);
+          setStatusMessage("Content generated successfully!");
+          router.push(`/creation/${taskId}`);
+        }
       }
     },
   });
@@ -82,7 +80,7 @@ const Generating = ({ taskId }: GeneratingProps) => {
           </p>
 
           {/* Progress Indicator */}
-          <div className="mb-6">
+          {/* <div className="mb-6">
             <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
               <div
                 className="bg-primary h-2 rounded-full transition-all duration-1000 ease-out"
@@ -90,21 +88,22 @@ const Generating = ({ taskId }: GeneratingProps) => {
               ></div>
             </div>
             <p className="text-sm text-gray-600">{progress}% Complete</p>
-          </div>
+          </div> */}
 
           {/* Status Message */}
           <div className="space-y-3 text-sm text-gray-500">
             <p className="flex items-center justify-center gap-2">
-              <span
-                className={`w-2 h-2 rounded-full animate-ping bg-green-500`}
-              ></span>
+              {progress === 100 ? (
+                <CheckCircle />
+              ) : (
+                <span
+                  className={`w-2 h-2 rounded-full animate-ping bg-green-500`}
+                ></span>
+              )}
+
               {statusMessage}
             </p>
-            {!taskId && (
-              <p className="opacity-70">
-                This usually takes 2-3 minutes for the best results
-              </p>
-            )}
+
             {/* {error && (
               <p className="text-red-500 text-sm">Connection issue: {error}</p>
             )} */}

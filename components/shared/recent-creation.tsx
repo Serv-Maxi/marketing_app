@@ -2,35 +2,40 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { creationService } from "@/services/database";
+import { TasksService } from "@/services/database";
 import { Database } from "@/lib/database.types";
 import { ListCreation } from "../custom/list-creation";
 
 type Creation = Database["public"]["Tables"]["contents"]["Row"];
+type Task = Database["public"]["Tables"]["tasks"]["Row"] & {
+  creations?: Creation[];
+};
 
 export const RecentCreation = () => {
   const { user } = useAuth();
-  const [creations, setCreations] = useState<Creation[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchRecentCreations = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const userCreations = await creationService.getRecentCreations();
-        setCreations(userCreations);
-      } catch (error) {
-        console.error("Error fetching recent creations:", error);
-        setError("Failed to load recent creations.");
-        setCreations([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchRecentTasks = async () => {
+    if (!user?.id) return;
 
-    fetchRecentCreations();
+    setLoading(true);
+    setError(null);
+    try {
+      const recentTasks = await TasksService.getRecentTasksWithCreations();
+      setTasks(recentTasks);
+    } catch (error) {
+      console.error("Error fetching recent tasks:", error);
+      setError("Failed to load recent creations.");
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecentTasks();
   }, [user?.id]);
 
   // Error state
@@ -80,7 +85,7 @@ export const RecentCreation = () => {
   }
 
   // Empty state
-  if (!creations.length) {
+  if (!tasks.length) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <div className="text-center text-gray-500">
@@ -108,8 +113,10 @@ export const RecentCreation = () => {
 
   return (
     <div className="grid grid-cols-1 gap-[16px] mt-[12px]">
-      {creations.map((creation) => (
-        <ListCreation key={creation.id} creation={creation} />
+      {tasks.map((task) => (
+        <div key={task.id}>
+          <ListCreation key={task.id} task={task} />
+        </div>
       ))}
     </div>
   );

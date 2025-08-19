@@ -11,11 +11,11 @@ const AspectRatio = ({ selectRatio, toogleAspectRatio }: AspectRatioProps) => {
   return (
     <Card className="p-[24px] bg-white rounded-[24px] shadow-none">
       <div className="space-y-6">
-        <h3 className="text-xl font-bold">Video Settings</h3>
+        <h3 className="text-xl font-bold">Ratio Settings</h3>
 
         {/* Video Resolution */}
         <div className="space-y-3">
-          <label className="text-sm font-medium mb-[4px]">Ratio</label>
+          <label className="text-sm font-medium mb-[4px]">Aspect Ratio</label>
           <div className="flex gap-3">
             <Badge
               variant={selectRatio === "16:9" ? "default" : "outline"}

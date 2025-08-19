@@ -17,19 +17,19 @@ const ContentTypeComponent = ({
       id: "Text" as ContentType,
       title: "Text",
       description: "Create your text creation",
-      icon: "/icons/type-text.svg",
+      icon: "/icons/type-text-2.svg",
     },
     {
       id: "Image" as ContentType,
       title: "Image",
       description: "Create your image creation",
-      icon: "/icons/type-image.svg",
+      icon: "/icons/type-image-2.svg",
     },
     {
       id: "Video" as ContentType,
       title: "Video",
       description: "Create your video creation",
-      icon: "/icons/type-video.svg",
+      icon: "/icons/type-video-2.svg",
     },
   ];
 
@@ -41,16 +41,16 @@ const ContentTypeComponent = ({
           className={`shadow-none flex border-none items-center py-[24px] rounded-[18px] gap-[8px] h-[74px] p-[10px] cursor-pointer transition-all border-[1px] hover:border-primary hover:border-[1px] ${
             selectedType === type.id
               ? "ring-1 ring-primary bg-primary/5"
-              : "hover:ring-1 hover:ring-gray-200"
+              : "hover:ring-1 hover:ring-primary"
           }`}
           onClick={() => onTypeChange(type.id)}
         >
           <div
-            className={`p-[12px] rounded-[12px] ${
+            className={`rounded-[12px] ${
               selectedType === type.id ? "bg-primary" : "bg-primary"
             }`}
           >
-            <Image src={type.icon} width={34} height={30} alt="" />
+            <Image src={type.icon} width={53} height={53} alt="" />
           </div>
           <div className="flex flex-col justify-center">
             <h3 className={selectedType === type.id ? "font-semibold" : ""}>

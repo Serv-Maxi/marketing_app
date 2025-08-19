@@ -13,16 +13,16 @@ import StyleOptimizationSection from "./_components/StyleOptimizationSection";
 import FoldersSection from "./_components/FoldersSection";
 import { Button } from "@/components/ui/button";
 import AspectRatio from "./_components/VideoSettingsSection";
-import { TasksService } from "@/services/database";
-import { isAxiosError } from "axios";
+import { Task, TasksService } from "@/services/database";
 import { ContentType } from "@/types/global";
 import ContentTypeComponent from "@/components/shared/content-type";
-import Generating from "@/components/shared/generating";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 const HomePage = () => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const typeFromUrl = searchParams.get("type") as ContentType | null;
+  const folderFromUrl = searchParams.get("folder") as string | null;
 
   const [selectedContentType, setSelectedContentType] =
     useState<ContentType>("Text");
@@ -42,20 +42,20 @@ const HomePage = () => {
       use_emoji: false,
       tone: "",
       language: "",
-      folder_id: "",
+      folder_id: folderFromUrl || "",
       aspect_ratio: "",
     },
   });
 
-  type StateStatus = {
+  type StateStatus<T> = {
     status: "idle" | "loading" | "success" | "error";
-    data: Array<{ id: string }>;
+    data: Array<T>;
     error: string;
   };
 
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectRatio, setSelectRatio] = useState<string>("");
-  const [creationState, setCreationState] = useState<StateStatus>({
+  const [creationState, setCreationState] = useState<StateStatus<Task>>({
     status: "idle",
     data: [],
     error: "",
@@ -88,25 +88,29 @@ const HomePage = () => {
       const payload = data;
       delete payload?.aspect_ratio;
 
-      const creation = await TasksService.createTask([
+      const creation: Task[] = await TasksService.createTask([
         {
           ...payload,
           status: "On Queue",
-          company_id: "8e8f7cfc-c5f4-4a33-a245-8dd695e2cfc7",
+          company_id: process.env.NEXT_PUBLIC_COMPANY_ID as string,
         },
       ]);
-      console.log("Creation response:", creation);
+
       if (creation) {
         setCreationState({
           status: "success",
-          data: Array.isArray(creation) ? creation : [creation],
+          data: creation,
           error: "",
         });
+
+        router.push(`/creation/process/${creation[0].id}`);
       }
     } catch (error) {
-      if (isAxiosError(error)) {
-        setCreationState({ status: "error", data: [], error: error.message });
-      }
+      setCreationState({
+        status: "error",
+        data: [],
+        error: error instanceof Error ? error.message : "An error occurred",
+      });
     } finally {
       // Don't reset state immediately - let the real-time updates handle it
       // setCreationState({ status: "idle", data: null });
@@ -117,16 +121,6 @@ const HomePage = () => {
       setSelectedContentType(typeFromUrl);
     }
   }, [typeFromUrl]);
-
-  const taskId = creationState.data?.[0]?.id;
-  if (creationState.status === "success" && taskId) {
-    return (
-      <Generating
-        taskId={taskId as string}
-        selectedContentType={selectedContentType}
-      />
-    );
-  }
 
   // Show error state
   if (creationState.status === "error") {
@@ -152,6 +146,8 @@ const HomePage = () => {
       </div>
     );
   }
+
+  console.log(selectedContentType);
   return (
     <div className="container mx-auto p-8 bg-background">
       <ContentTypeComponent
@@ -162,13 +158,12 @@ const HomePage = () => {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 mt-[24px]">
         <MainPromptSection register={register} />
 
-        {selectedContentType === "Video" ||
-          (selectedContentType === "Image" && (
-            <AspectRatio
-              selectRatio={selectRatio}
-              toogleAspectRatio={toogleAspectRatio}
-            />
-          ))}
+        {selectedContentType !== "Text" && (
+          <AspectRatio
+            selectRatio={selectRatio}
+            toogleAspectRatio={toogleAspectRatio}
+          />
+        )}
 
         <BasicsSection
           control={control}
@@ -187,10 +182,12 @@ const HomePage = () => {
         <div className="flex justify-end">
           <Button
             type="submit"
-            disabled={false} // Form only shows when idle, so never disabled
+            disabled={creationState.status === "loading"}
             className="text-secondary-foreground px-8 py-3 rounded-[12px]"
           >
-            Create Content
+            {creationState.status === "loading"
+              ? "Submitting..."
+              : "Create Content"}
           </Button>
         </div>
       </form>

@@ -4,10 +4,12 @@ import { useParams, useRouter } from "next/navigation";
 import { folderService, TasksService, type Folder } from "@/services/database";
 import ContentType from "@/components/shared/content-type";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
 import CreateFolderPopup from "../_components/CreateFolderPopup";
 import { Creations } from "@/components/shared/creations";
 import LoadingComponent from "@/components/shared/loading-component";
+import { Button } from "@/components/ui/button";
+import { ContentType as TypeContentType } from "@/types/global";
 
 const HomePage = () => {
   const router = useRouter();
@@ -17,6 +19,9 @@ const HomePage = () => {
   const [taskCount, setTaskCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<TypeContentType | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,10 +56,6 @@ const HomePage = () => {
 
     fetchData();
   }, [id]);
-
-  const handleCreateFolder = () => {
-    // Logic to handle folder creation
-  };
 
   if (isLoading) return <LoadingComponent />;
 
@@ -94,21 +95,30 @@ const HomePage = () => {
         </div>
       </Card>
 
-      <div className="mb-[24px] mt-[48px]">
+      <div className="mb-[24px] mt-[48px] flex justify-between">
         <h3 className="text-[18px]">Filter Folder</h3>
+        <Button
+          variant="ghost"
+          className="text-primary"
+          onClick={() => router.push("/creation/new?folder=" + id)}
+        >
+          <Plus /> Add Creation
+        </Button>
       </div>
-      <ContentType onTypeChange={() => {}} />
+      <ContentType
+        onTypeChange={(type) => setSelectedType(type)}
+        selectedType={selectedType}
+      />
 
       <div className="mb-[24px] mt-[48px] flex justify-between items-center">
         <h3 className="text-[18px]">Your Creation</h3>
       </div>
-      <Creations id={id as string} />
+      <Creations id={id as string} selectedType={selectedType} />
 
       {/* Create Folder Popup */}
       <CreateFolderPopup
         isOpen={isCreateFolderOpen}
         onClose={() => setIsCreateFolderOpen(false)}
-        onSave={handleCreateFolder}
       />
     </div>
   );

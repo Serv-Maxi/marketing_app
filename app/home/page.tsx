@@ -14,7 +14,7 @@ const HomePage = () => {
 
       <div className="mb-[24px] mt-[48px]">
         <h3 className="text-[18px] mb-[8px]">Quick Start</h3>
-        <p>There are many variations of passages of Lorem Ipsum available</p>
+        <p>Get started with you content type</p>
       </div>
       <ContentType
         onTypeChange={(type) => router.push(`/creation/new?type=${type}`)}
@@ -31,7 +31,7 @@ const HomePage = () => {
           View All Folders
         </Button>
       </div>
-      <DefaultFolders />
+      <DefaultFolders limit={11} />
 
       <div className="mb-[24px] mt-[48px]">
         <h3 className="text-[18px]">Your latest generate</h3>

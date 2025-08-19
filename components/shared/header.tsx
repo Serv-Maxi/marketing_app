@@ -13,11 +13,11 @@ import { LayoutDashboard, FileText, User, ChevronDown } from "lucide-react";
 
 const Header = () => {
   return (
-    <header className="w-full bg-white fixed">
+    <header className="w-full bg-white fixed shadow-md z-[20]">
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Left side - Logo/Icon */}
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/home" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
               <Image
                 src="/icons/logo.svg"
