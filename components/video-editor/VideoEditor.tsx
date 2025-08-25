@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTimelineStore } from "@/hooks/video-editor/useTimeline";
 import VideoPreview from "./VideoPreview";
 import Timeline from "./Timeline";
@@ -29,6 +29,19 @@ const VideoEditor = () => {
 
   const { clips, audioTracks, initializeClips } = useTimelineStore();
 
+  // Read query params to support deep-linking from creation page
+  const searchParams = useMemo(
+    () =>
+      new URLSearchParams(
+        typeof window !== "undefined" ? window.location.search : ""
+      ),
+    []
+  );
+  const incomingVideoUrl = searchParams.get("videoUrl");
+  const incomingTitle = searchParams.get("title") || "Imported Clip";
+  const incomingRatio =
+    (searchParams.get("ratio") as "16:9" | "9:16" | null) || null;
+
   const videoRef = useRef<{ seekTo: (time: number) => void }>(null);
 
   // Utility function to get video duration
@@ -49,81 +62,83 @@ const VideoEditor = () => {
     });
   };
 
-  // Initialize with sample clips
+  // Initialize with incoming clip if provided, else sample clips
   useEffect(() => {
-    const initializeClipsWithDuration = async () => {
-      // Example of clips - some with explicit times, some without
+    const init = async () => {
+      // Set aspect ratio if provided
+      if (incomingRatio === "16:9" || incomingRatio === "9:16") {
+        setAspectRatio(incomingRatio);
+      }
+
+      // If a video URL is provided via query, seed it as a single clip
+      if (incomingVideoUrl) {
+        try {
+          const actualDuration = await getVideoDuration(incomingVideoUrl).catch(
+            () => 10
+          );
+          const clip = {
+            id: `import_${Date.now()}`,
+            src: incomingVideoUrl,
+            startTime: 0,
+            endTime: actualDuration,
+            duration: actualDuration,
+            originalDuration: actualDuration,
+            title: incomingTitle,
+          } as const;
+          initializeClips([clip]);
+          return;
+        } catch (e) {
+          console.error("Failed to load incoming video:", e);
+          // fall through to samples
+        }
+      }
+
+      // Fallback to samples
       const sampleClipsWithTimes = [
         {
           id: "1",
           src: "/porttrait-1.mp4",
           startTime: 0,
-          endTime: 6.9, // Explicit end time
+          endTime: 6.9,
           title: "Intro Clip",
         },
-        {
-          id: "2",
-          src: "/porttrait-2.mp4",
-          // No startTime/endTime defined - will use full video duration
-          title: "Main Content",
-        },
-        {
-          id: "3",
-          src: "/porttrait-4.mp4",
-          title: "Outro",
-        },
+        { id: "2", src: "/porttrait-2.mp4", title: "Main Content" },
+        { id: "3", src: "/porttrait-4.mp4", title: "Outro" },
       ];
 
       try {
-        // Process clips to get durations
         const clipsWithDurations = await Promise.all(
           sampleClipsWithTimes.map(async (clip) => {
-            // Get the actual video duration first
-            let actualDuration;
+            let actualDuration = 10;
             try {
               actualDuration = await getVideoDuration(clip.src);
-            } catch {
-              actualDuration = 10; // Fallback
-            }
-
-            // If startTime and endTime are not defined, use full video duration
-            if (clip.startTime === undefined || clip.endTime === undefined) {
-              return {
-                ...clip,
-                startTime: 0,
-                endTime: actualDuration,
-                duration: actualDuration,
-                originalDuration: actualDuration, // Store original duration
-              };
-            } else {
-              // Use explicit times but store original duration
-              return {
-                ...clip,
-                startTime: clip.startTime,
-                endTime: clip.endTime,
-                duration: clip.endTime - clip.startTime,
-                originalDuration: actualDuration, // Store original duration
-              };
-            }
+            } catch {}
+            return {
+              ...clip,
+              startTime: clip.startTime ?? 0,
+              endTime: clip.endTime ?? actualDuration,
+              duration:
+                (clip.endTime ?? actualDuration) - (clip.startTime ?? 0),
+              originalDuration: actualDuration,
+            };
           })
         );
-
         initializeClips(clipsWithDurations);
       } catch (error) {
         console.error("Error initializing clips:", error);
-        // Fallback with default durations
         const fallbackClips = sampleClipsWithTimes.map((clip) => ({
           ...clip,
           startTime: clip.startTime || 0,
           endTime: clip.endTime || 10,
           duration: (clip.endTime || 10) - (clip.startTime || 0),
-          originalDuration: 10, // Default original duration
+          originalDuration: 10,
         }));
         initializeClips(fallbackClips);
       }
     };
 
-    initializeClipsWithDuration();
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initializeClips]);
 
   const handlePlayPause = () => {
@@ -165,12 +180,12 @@ const VideoEditor = () => {
         transition={{ duration: 0.5 }}
         className="flex flex-col gap-4 h-full"
       >
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Marketing Video Editor</h1>
+        <div className="w-full bg-white fixed shadow-md z-[20] top-0 left-0 p-[24px] flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Video Editor</h1>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
+              className="rounded-md px-4 py-2 bg-blue-500 text-white hover:bg-blue-600"
               onClick={() => setIsExportDialogOpen(true)}
             >
               Export Video
@@ -178,8 +193,8 @@ const VideoEditor = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-grow">
-          <div className="bg-card rounded-[24px] p-4 border border-border shadow-sm flex flex-col gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-grow mt-[12px]">
+          <div className="bg-card rounded-[12px] p-4 flex flex-col gap-4">
             <h2 className="text-lg font-semibold">Assets</h2>
 
             <h3 className="text-sm font-medium mb-2">Add Videos</h3>
@@ -195,7 +210,7 @@ const VideoEditor = () => {
               </div>
             </div>
           </div>
-          <div className="lg:col-span-2 bg-card rounded-[24px] overflow-hidden border border-border shadow-sm flex items-center justify-center">
+          <div className="lg:col-span-2 bg-card rounded-[12px] overflow-hidden border-2 border-primary flex items-center justify-center">
             <div
               className="bg-black/90 transition-all duration-300 ease-in-out max-w-full max-h-[560px]"
               style={{
@@ -216,7 +231,7 @@ const VideoEditor = () => {
               />
             </div>
           </div>
-          <div className="bg-card rounded-[24px] p-4 border border-border shadow-sm flex flex-col gap-4">
+          <div className="bg-card rounded-[12px] p-4 flex flex-col gap-4">
             <h2 className="text-lg font-semibold">Controls</h2>
             <div className="flex items-center gap-2">
               <PlayPauseButton
@@ -294,7 +309,7 @@ const VideoEditor = () => {
           </div>
         </div>
 
-        <div className="bg-card rounded-[24px] p-4 border border-border shadow-sm">
+        <div className="bg-card rounded-[12px] p-4">
           <Timeline
             clips={clips}
             currentTime={currentTime}

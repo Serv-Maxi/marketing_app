@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Controller, Control } from "react-hook-form";
+import { Controller, Control, useFormState } from "react-hook-form";
 import { FormData } from "@/types/form";
 
 interface StyleOptimizationSectionProps {
@@ -17,6 +17,8 @@ interface StyleOptimizationSectionProps {
 const StyleOptimizationSection = ({
   control,
 }: StyleOptimizationSectionProps) => {
+  // Access form state to show validation errors locally without requiring parent to pass them down
+  const { errors } = useFormState({ control });
   return (
     <Card className="p-[24px] bg-white rounded-[24px] shadow-none">
       <div className="space-y-6">
@@ -66,15 +68,24 @@ const StyleOptimizationSection = ({
             name="language"
             control={control}
             render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger className="rounded-[12px]">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="english">English</SelectItem>
-                  <SelectItem value="indonesia">Indonesia</SelectItem>
-                </SelectContent>
-              </Select>
+              <>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger
+                    className="rounded-[12px]"
+                    aria-invalid={!!errors.language}
+                  >
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="english">English</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.language && (
+                  <p className="text-xs text-red-500 pt-1">
+                    {String(errors.language.message)}
+                  </p>
+                )}
+              </>
             )}
           />
         </div>

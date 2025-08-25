@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Clip } from "@/lib/video-editor/types";
+import { Clip, AudioTrack } from "@/lib/video-editor/types";
 
 export const useFFmpeg = () => {
-  const [ffmpeg, setFFmpeg] = useState<any>(null);
+  // FFmpeg instance type is dynamic; using unknown then narrowed when used
+  const [ffmpeg, setFFmpeg] = useState<unknown>(null);
   const [isReady, setIsReady] = useState(false);
   const [isMockMode, setIsMockMode] = useState(false);
 
@@ -46,7 +47,8 @@ export const useFFmpeg = () => {
   const exportVideo = useCallback(
     async (
       clips: Clip[],
-      onProgress: (progress: number) => void
+      onProgress: (progress: number) => void,
+      audioTracks: AudioTrack[] = []
     ): Promise<Blob | null> => {
       if (isMockMode) {
         // Mock export simulation with trimmed clips
@@ -107,10 +109,20 @@ export const useFFmpeg = () => {
       }
 
       try {
+        if (!ffmpeg) throw new Error("FFmpeg not initialized");
+        // Narrow ffmpeg instance
+        const ff = ffmpeg as {
+          writeFile: (path: string, data: Uint8Array | string) => Promise<void>;
+          exec: (args: string[]) => Promise<void>;
+          readFile: (path: string) => Promise<Uint8Array>;
+        };
         const { fetchFile } = await import("@ffmpeg/util");
 
         // Process each clip with trimming using FFmpeg
         const processedClips: string[] = [];
+        const totalVideoSteps = clips.length || 1;
+        const hasAudio = audioTracks.length > 0;
+        // We'll allocate progress: 50% video, 40% audio processing, 10% final mux
 
         for (let i = 0; i < clips.length; i++) {
           const clip = clips[i];
@@ -118,11 +130,11 @@ export const useFFmpeg = () => {
           const outputFileName = `trimmed_${i}.mp4`;
 
           // Write input file
-          await ffmpeg.writeFile(inputFileName, await fetchFile(clip.src));
+          await ff.writeFile(inputFileName, await fetchFile(clip.src));
 
           // Trim the clip using FFmpeg
           const duration = clip.endTime - clip.startTime;
-          await ffmpeg.exec([
+          await ff.exec([
             "-i",
             inputFileName,
             "-ss",
@@ -135,18 +147,20 @@ export const useFFmpeg = () => {
           ]);
 
           processedClips.push(outputFileName);
-          onProgress(((i + 1) / clips.length) * 50); // First 50% for processing
+          onProgress(((i + 1) / totalVideoSteps) * 50); // First 50% for video processing
         }
 
         // Create concat file
         const concatContent = processedClips
           .map((filename) => `file '${filename}'`)
           .join("\n");
+        await ff.writeFile(
+          "concat.txt",
+          new TextEncoder().encode(concatContent)
+        );
 
-        await ffmpeg.writeFile("concat.txt", concatContent);
-
-        // Concatenate all clips
-        await ffmpeg.exec([
+        // Concatenate all clips into intermediate output
+        await ff.exec([
           "-f",
           "concat",
           "-safe",
@@ -155,14 +169,157 @@ export const useFFmpeg = () => {
           "concat.txt",
           "-c",
           "copy",
-          "output.mp4",
+          "output_video_temp.mp4",
         ]);
 
-        onProgress(100);
+        // If no extra audio tracks, rename final file and return
+        if (!hasAudio) {
+          await ff.exec([
+            "-i",
+            "output_video_temp.mp4",
+            "-c",
+            "copy",
+            "output.mp4",
+          ]);
+          onProgress(100);
+          const dataNoAudio = await ff.readFile("output.mp4");
+          const copyNoAudio = new Uint8Array(dataNoAudio);
+          return new Blob([copyNoAudio], { type: "video/mp4" });
+        }
 
-        // Read the output file
-        const data = await ffmpeg.readFile("output.mp4");
-        return new Blob([data], { type: "video/mp4" });
+        // Process audio tracks: trim & apply volume
+        const processedAudio: string[] = [];
+        for (let i = 0; i < audioTracks.length; i++) {
+          const track = audioTracks[i];
+          const inputAudioName =
+            `audio_input_${i}` +
+            track.src.substring(track.src.lastIndexOf("."));
+          const outputAudioName = `audio_trimmed_${i}.wav`;
+          try {
+            await ff.writeFile(
+              inputAudioName,
+              await (await import("@ffmpeg/util")).fetchFile(track.src)
+            );
+          } catch (e) {
+            console.warn("Failed writing audio file", track.src, e);
+            continue;
+          }
+          const aDuration = track.endTime - track.startTime;
+          // Trim & volume adjust
+          await ff.exec([
+            "-i",
+            inputAudioName,
+            "-ss",
+            track.startTime.toString(),
+            "-t",
+            aDuration.toString(),
+            "-filter:a",
+            `volume=${track.volume.toFixed(2)}`,
+            outputAudioName,
+          ]);
+          processedAudio.push(outputAudioName);
+          // Progress within 40% allocation (50 -> 90)
+          onProgress(50 + ((i + 1) / audioTracks.length) * 40);
+        }
+
+        // Mix audio tracks
+        const mixedAudioName = "mixed_audio.wav";
+        if (processedAudio.length === 1) {
+          // Single track, just copy
+          await ff.exec([
+            "-i",
+            processedAudio[0],
+            "-c",
+            "copy",
+            mixedAudioName,
+          ]);
+        } else if (processedAudio.length > 1) {
+          // Build inputs list
+          const amixInputs = processedAudio.length;
+          const args: string[] = [];
+          processedAudio.forEach((name) => {
+            args.push("-i", name);
+          });
+          args.push(
+            "-filter_complex",
+            `amix=inputs=${amixInputs}:duration=longest:dropout_transition=0`,
+            "-c:a",
+            "pcm_s16le",
+            mixedAudioName
+          );
+          await ff.exec(args);
+        } else {
+          // No valid processed audio (all failed); fallback to video only
+          await ff.exec([
+            "-i",
+            "output_video_temp.mp4",
+            "-c",
+            "copy",
+            "output.mp4",
+          ]);
+          onProgress(100);
+          const dataFallback = await ff.readFile("output.mp4");
+          const copyFallback = new Uint8Array(dataFallback);
+          return new Blob([copyFallback], { type: "video/mp4" });
+        }
+
+        // Remove any existing audio from video and mux mixed audio
+        // Strategy: if video temp has audio we blend it with mixed audio.
+        // Probe for audio presence by attempting to extract stream info (simplified heuristic).
+        let videoHasAudio = false;
+        try {
+          await ff.exec(["-i", "output_video_temp.mp4", "-f", "null", "-"]);
+          // If exec succeeded we assume possible audio track; we can't parse logs here easily.
+          // For simplicity treat as having audio; users can refine.
+          videoHasAudio = true; // Heuristic; improve with parsing if needed.
+        } catch {
+          videoHasAudio = false;
+        }
+
+        if (videoHasAudio) {
+          // Extract original audio then mix with mixedAudioName
+          await ff.exec([
+            "-i",
+            "output_video_temp.mp4",
+            "-i",
+            mixedAudioName,
+            "-filter_complex",
+            "[0:a][1:a]amix=inputs=2:duration=longest:dropout_transition=0[aout]",
+            "-map",
+            "0:v:0",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-shortest",
+            "output.mp4",
+          ]);
+        } else {
+          // Map video + mixed audio directly
+          await ff.exec([
+            "-i",
+            "output_video_temp.mp4",
+            "-i",
+            mixedAudioName,
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-shortest",
+            "output.mp4",
+          ]);
+        }
+
+        onProgress(100);
+        const finalData = await ff.readFile("output.mp4");
+        const copyFinal = new Uint8Array(finalData);
+        return new Blob([copyFinal], { type: "video/mp4" });
       } catch (error) {
         console.error("Export error:", error);
         throw error;

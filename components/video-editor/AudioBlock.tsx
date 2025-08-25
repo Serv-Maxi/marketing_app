@@ -39,16 +39,16 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
     removeAudioTrack,
     updateAudioTrim,
     restoreAudioOriginalDuration,
-    cutAudioTrack,
     duplicateAudioTrack,
+    setCutSelection,
+    selectedCut,
   } = useTimelineStore();
   const { waveformData, isLoading } = useAudioWaveform(audioTrack.src);
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [showCutIndicator, setShowCutIndicator] = useState(false);
-  const [cutPosition, setCutPosition] = useState<number>(0);
-  const [cutPositionPixels, setCutPositionPixels] = useState<number>(0);
+  const [hoverCutPixels, setHoverCutPixels] = useState<number>(0);
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({
     x: 0,
@@ -152,61 +152,53 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
   };
 
   const handleCut = () => {
-    cutAudioTrack(audioTrack.id, cutPosition);
+    // Execute pending cut selection via timeline toolbar (handled globally)
     setContextMenuOpen(false);
     setShowCutIndicator(false);
   };
 
   const handleAudioClick = (e: React.MouseEvent) => {
-    // Only handle click if not resizing and not dragging
     if (isResizing || isDragging) return;
-
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const audioWidth = rect.width;
-
-    // Calculate the time position of the click
-    const relativePosition = clickX / audioWidth;
-    const cutTime =
+    const width = rect.width;
+    const relative = clickX / width;
+    const time =
       audioTrack.startTime +
-      (audioTrack.endTime - audioTrack.startTime) * relativePosition;
-
-    // Don't cut too close to the edges (minimum 0.5 seconds from each edge)
-    const minCutTime = audioTrack.startTime + 0.5;
-    const maxCutTime = audioTrack.endTime - 0.5;
-
-    if (cutTime >= minCutTime && cutTime <= maxCutTime) {
-      cutAudioTrack(audioTrack.id, cutTime);
+      (audioTrack.endTime - audioTrack.startTime) * relative;
+    const min = audioTrack.startTime + 0.5;
+    const max = audioTrack.endTime - 0.5;
+    if (time >= min && time <= max) {
+      setCutSelection(audioTrack.id, time, "audio");
+      setShowCutIndicator(true);
+      setHoverCutPixels(clickX);
     }
   };
 
   const handleAudioMouseMove = (e: React.MouseEvent) => {
     if (isResizing || isDragging) return;
-
     const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const audioWidth = rect.width;
-
-    // Show cut indicator when mouse is not near edges
-    const edgeThreshold = 20; // pixels
-    const isNearEdge =
-      mouseX < edgeThreshold || mouseX > audioWidth - edgeThreshold;
-
-    if (!isNearEdge) {
-      setShowCutIndicator(true);
-      setCutPositionPixels(mouseX);
-      const relativePosition = mouseX / audioWidth;
-      const timePosition =
-        audioTrack.startTime +
-        (audioTrack.endTime - audioTrack.startTime) * relativePosition;
-      setCutPosition(timePosition);
-    } else {
-      setShowCutIndicator(false);
+    let mouseX = e.clientX - rect.left;
+    if (mouseX < 0) mouseX = 0;
+    if (mouseX > rect.width) mouseX = rect.width;
+    // Don't show cut indicator when hovering over trim handle zones
+    const trimHandleZone = 8; // pixels matching w-2 (~8px)
+    const nearLeft = mouseX <= trimHandleZone;
+    const nearRight = mouseX >= rect.width - trimHandleZone;
+    if (nearLeft || nearRight) {
+      if (selectedCut?.audioId !== audioTrack.id) {
+        setShowCutIndicator(false);
+      }
+      return;
     }
+    setShowCutIndicator(true);
+    setHoverCutPixels(mouseX);
   };
 
   const handleAudioMouseLeave = () => {
-    setShowCutIndicator(false);
+    if (selectedCut?.audioId !== audioTrack.id) {
+      setShowCutIndicator(false);
+    }
   };
 
   const handleRightClick = (e: React.MouseEvent) => {
@@ -294,56 +286,38 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
         </div>
 
         {/* Cut indicator line */}
-        {showCutIndicator && !isResizing && (
-          <motion.div
-            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 pointer-events-none"
-            style={{ left: `${cutPositionPixels}px` }}
-            initial={{ opacity: 0, scaleY: 0 }}
-            animate={{ opacity: 1, scaleY: 1 }}
-            exit={{ opacity: 0, scaleY: 0 }}
-          >
-            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
-              <Scissors className="h-3 w-3 text-red-500 bg-white rounded-full p-0.5" />
-            </div>
-          </motion.div>
-        )}
+        {(showCutIndicator || selectedCut?.audioId === audioTrack.id) &&
+          !isResizing && (
+            <motion.div
+              className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 pointer-events-none"
+              style={{
+                left:
+                  selectedCut?.audioId === audioTrack.id
+                    ? `${((selectedCut.time - audioTrack.startTime) / (audioTrack.endTime - audioTrack.startTime)) * 100}%`
+                    : `${hoverCutPixels}px`,
+              }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              exit={{ opacity: 0, scaleY: 0 }}
+            >
+              <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
+                <Scissors className="h-3 w-3 text-red-500 bg-white rounded-full p-0.5" />
+              </div>
+            </motion.div>
+          )}
 
         <div className="absolute inset-0 p-2 flex items-center justify-between z-10">
-          <div className="flex items-center gap-2 flex-1 min-w-0 bg-black/50 rounded px-2 py-1">
+          {/* <div className="flex items-center gap-2 flex-1 min-w-0 bg-black/50 rounded px-2 py-1">
             <Volume2 className="h-3 w-3 text-orange-300 flex-shrink-0" />
             <span className="text-xs font-medium truncate text-white">
               {audioTrack.title}
             </span>
-          </div>
+          </div> */}
 
           <div className="flex items-center gap-1 bg-black/50 rounded px-2 py-1">
             <span className="text-xs text-orange-200">
               {(audioTrack.endTime - audioTrack.startTime).toFixed(1)}s
             </span>
-
-            {/* Controls that appear on hover */}
-            <AnimatePresence>
-              {showControls && (
-                <motion.div
-                  className="flex items-center gap-1"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-5 w-5 p-0 hover:bg-orange-600/20 text-white"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowCutIndicator(!showCutIndicator);
-                    }}
-                  >
-                    <Scissors className="h-3 w-3" />
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             <Button
               variant="ghost"
@@ -427,12 +401,14 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
             Duplicate Audio
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={handleCut}
+            onClick={() => {
+              handleCut();
+            }}
             className="cursor-pointer"
-            disabled={!showCutIndicator}
+            disabled={!selectedCut || selectedCut.audioId !== audioTrack.id}
           >
             <Scissors className="mr-2 h-4 w-4" />
-            Cut at Position
+            Pending Cut
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleRestore} className="cursor-pointer">

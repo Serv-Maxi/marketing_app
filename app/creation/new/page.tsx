@@ -1,9 +1,10 @@
 "use client";
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { usePlatforms } from "@/hooks/usePlatforms";
 import { FormData as FormType } from "@/types/form";
-import AuthWrapper from "@/components/auth/AuthWrapper";
 
 // Import components
 import MainPromptSection from "./_components/MainPromptSection";
@@ -28,9 +29,38 @@ const HomePage = () => {
     useState<ContentType>("Text");
   const { platforms, isLoading: platformsLoading } = usePlatforms();
 
-  const { control, register, handleSubmit, setValue } = useForm<FormType>({
+  // Zod schema for form validation
+  const formSchema = z.object({
+    type: z.enum(["Text", "Image", "Video"]).default("Text"),
+    prompt: z
+      .string()
+      .min(1, { message: "Prompt is required" })
+      .max(4000, { message: "Prompt too long" }),
+    platforms: z.array(z.string()).min(1, { message: "Platform required" }),
+    audience: z.string().optional(),
+    campaign_goal: z.string().optional(),
+    value_proposition: z.string().optional(),
+    selling_point: z.string().optional(),
+    selling_features: z.string().optional(),
+    cta: z.string().optional(),
+    use_emoji: z.boolean().default(false),
+    tone: z.string().optional(),
+    language: z.string().min(1, { message: "Language is required" }),
+    folder_id: z.string().optional(),
+    aspect_ratio: z.string().optional(),
+  });
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    trigger,
+    formState: { errors },
+  } = useForm<FormType>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      type: "Text",
+      type: typeFromUrl || "Text",
       prompt: "",
       platforms: [],
       audience: "",
@@ -41,7 +71,7 @@ const HomePage = () => {
       cta: "",
       use_emoji: false,
       tone: "",
-      language: "",
+      language: "english",
       folder_id: folderFromUrl || "",
       aspect_ratio: "",
     },
@@ -67,12 +97,13 @@ const HomePage = () => {
       : [...selectedPlatforms, platformSlug];
 
     setSelectedPlatforms(updatedPlatforms);
-    setValue("platforms", updatedPlatforms);
+    setValue("platforms", updatedPlatforms, { shouldValidate: true });
   };
 
   const handleContentTypeChange = (type: ContentType) => {
     setSelectedContentType(type);
-    setValue("type", type);
+    setValue("type", type, { shouldValidate: true });
+    trigger();
   };
 
   const toogleAspectRatio = (resolution: string) => {
@@ -147,7 +178,6 @@ const HomePage = () => {
     );
   }
 
-  console.log(selectedContentType);
   return (
     <div className="container mx-auto p-8 bg-background">
       <ContentTypeComponent
@@ -156,7 +186,7 @@ const HomePage = () => {
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 mt-[24px]">
-        <MainPromptSection register={register} />
+        <MainPromptSection register={register} errors={errors} />
 
         {selectedContentType !== "Text" && (
           <AspectRatio
@@ -166,6 +196,7 @@ const HomePage = () => {
         )}
 
         <BasicsSection
+          selectedContentType={selectedContentType}
           control={control}
           platforms={platforms}
           selectedPlatforms={selectedPlatforms}
@@ -196,11 +227,7 @@ const HomePage = () => {
 };
 
 const WrappedHomePage = () => {
-  return (
-    <AuthWrapper>
-      <HomePage />
-    </AuthWrapper>
-  );
+  return <HomePage />;
 };
 
 export default WrappedHomePage;

@@ -1,9 +1,17 @@
 import { create } from "zustand";
 import { Clip, AudioTrack } from "@/lib/video-editor/types";
 
+interface SelectedCutState {
+  clipId?: string;
+  audioId?: string;
+  time: number;
+  kind: "clip" | "audio";
+}
+
 interface TimelineState {
   clips: Clip[];
   audioTracks: AudioTrack[];
+  selectedCut: SelectedCutState | null;
   initializeClips: (clips: Clip[]) => void;
   reorderClips: (oldIndex: number, newIndex: number) => void;
   updateClipTrim: (clipId: string, startTime: number, endTime: number) => void;
@@ -13,6 +21,9 @@ interface TimelineState {
   updateClip: (id: string, updates: Partial<Clip>) => void;
   cutClip: (clipId: string, cutTime: number) => void;
   duplicateClip: (clipId: string) => void;
+  setCutSelection: (id: string, time: number, kind?: "clip" | "audio") => void;
+  clearCutSelection: () => void;
+  executeCutSelection: () => void;
   addAudioTrack: (audioTrack: AudioTrack) => void;
   removeAudioTrack: (audioId: string) => void;
   updateAudioTrack: (audioId: string, updates: Partial<AudioTrack>) => void;
@@ -29,6 +40,7 @@ interface TimelineState {
 export const useTimelineStore = create<TimelineState>((set) => ({
   clips: [],
   audioTracks: [],
+  selectedCut: null,
 
   initializeClips: (clips) =>
     set({
@@ -161,6 +173,75 @@ export const useTimelineStore = create<TimelineState>((set) => ({
       newClips.splice(clipIndex, 1, firstClip, secondClip);
 
       return { clips: newClips };
+    }),
+
+  setCutSelection: (id, time, kind = "clip") =>
+    set(() =>
+      kind === "clip"
+        ? { selectedCut: { clipId: id, time, kind } }
+        : { selectedCut: { audioId: id, time, kind } }
+    ),
+  clearCutSelection: () => set(() => ({ selectedCut: null })),
+  executeCutSelection: () =>
+    set((state) => {
+      if (!state.selectedCut) return state;
+      const { kind, time, clipId, audioId } = state.selectedCut;
+      if (kind === "clip" && clipId) {
+        const clipIndex = state.clips.findIndex((c) => c.id === clipId);
+        if (clipIndex === -1) return { ...state, selectedCut: null };
+        const originalClip = state.clips[clipIndex];
+        const relativeTime = time - originalClip.startTime;
+        if (
+          relativeTime <= 0 ||
+          relativeTime >= originalClip.endTime - originalClip.startTime
+        ) {
+          return { ...state, selectedCut: null };
+        }
+        const firstClip: Clip = {
+          ...originalClip,
+          id: `${originalClip.id}_part1_${Date.now()}`,
+          endTime: originalClip.startTime + relativeTime,
+          duration: relativeTime,
+        };
+        const secondClip: Clip = {
+          ...originalClip,
+          id: `${originalClip.id}_part2_${Date.now()}`,
+          startTime: originalClip.startTime + relativeTime,
+          duration:
+            originalClip.endTime - originalClip.startTime - relativeTime,
+        };
+        const newClips = [...state.clips];
+        newClips.splice(clipIndex, 1, firstClip, secondClip);
+        return { clips: newClips, selectedCut: null };
+      } else if (kind === "audio" && audioId) {
+        const trackIndex = state.audioTracks.findIndex((t) => t.id === audioId);
+        if (trackIndex === -1) return { ...state, selectedCut: null };
+        const originalTrack = state.audioTracks[trackIndex];
+        const relativeTime = time - originalTrack.startTime;
+        if (
+          relativeTime <= 0 ||
+          relativeTime >= originalTrack.endTime - originalTrack.startTime
+        ) {
+          return { ...state, selectedCut: null };
+        }
+        const firstTrack: AudioTrack = {
+          ...originalTrack,
+          id: `${originalTrack.id}_part1_${Date.now()}`,
+          endTime: originalTrack.startTime + relativeTime,
+          duration: relativeTime,
+        };
+        const secondTrack: AudioTrack = {
+          ...originalTrack,
+          id: `${originalTrack.id}_part2_${Date.now()}`,
+          startTime: originalTrack.startTime + relativeTime,
+          duration:
+            originalTrack.endTime - originalTrack.startTime - relativeTime,
+        };
+        const newAudioTracks = [...state.audioTracks];
+        newAudioTracks.splice(trackIndex, 1, firstTrack, secondTrack);
+        return { audioTracks: newAudioTracks, selectedCut: null };
+      }
+      return { ...state, selectedCut: null };
     }),
 
   duplicateClip: (clipId) =>

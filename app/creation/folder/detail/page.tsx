@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import CreateFolderPopup from "../_components/CreateFolderPopup";
+import CreateFolderPopup from "../../../../components/shared/CreateFolderPopup";
 import { Input } from "@/components/ui/input";
 import { RecentCreation } from "@/components/shared/recent-creation";
 

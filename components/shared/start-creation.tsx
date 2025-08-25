@@ -21,9 +21,9 @@ export const StartCreation = () => {
                 Create your <br /> marketing workflow right now!
               </h1>
               <p className="text-lg text-muted-foreground leading-relaxed text-white">
-                There are many variations of passages of Lorem Ipsum available,
-                but the majority have suffered alteration in some form, by
-                injected humour,
+                Create your marketing workflow right now! Plan, generate, and
+                organize content effortlessly to boost engagement, save time,
+                and grow faster.
               </p>
             </div>
             <Button
@@ -66,7 +66,7 @@ export const StartCreation = () => {
                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <CardTitle className="text-base">AI Assistant</CardTitle>
+                <CardTitle className="text-base">Image and Video</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <CardDescription>Smart editing suggestions</CardDescription>

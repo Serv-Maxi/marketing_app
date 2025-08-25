@@ -5,7 +5,7 @@ import { folderService, TasksService, type Folder } from "@/services/database";
 import ContentType from "@/components/shared/content-type";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, Plus } from "lucide-react";
-import CreateFolderPopup from "../_components/CreateFolderPopup";
+import CreateFolderPopup from "../../../../components/shared/CreateFolderPopup";
 import { Creations } from "@/components/shared/creations";
 import LoadingComponent from "@/components/shared/loading-component";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ const HomePage = () => {
         ]);
 
         setFolderDetail(folder);
-        setTaskCount(count + 1);
+        setTaskCount(count);
 
         if (!folder) {
           setError("Folder not found");
@@ -107,13 +107,13 @@ const HomePage = () => {
       </div>
       <ContentType
         onTypeChange={(type) => setSelectedType(type)}
-        selectedType={selectedType}
+        selectedType={selectedType ?? undefined}
       />
 
       <div className="mb-[24px] mt-[48px] flex justify-between items-center">
         <h3 className="text-[18px]">Your Creation</h3>
       </div>
-      <Creations id={id as string} selectedType={selectedType} />
+      <Creations id={id as string} selectedType={selectedType} fromFolder />
 
       {/* Create Folder Popup */}
       <CreateFolderPopup

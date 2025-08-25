@@ -1,8 +1,14 @@
 import Image from "next/image";
 import { Card, CardContent } from "../ui/card";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, Pencil } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "../ui/dropdown-menu";
 
-interface FolderCard {
+interface FolderCardProps {
   folder: {
     icon: string;
     title: string;
@@ -10,8 +16,9 @@ interface FolderCard {
     date: string;
     color: string;
   };
+  onRename?: () => void;
 }
-const FolderCard = ({ folder }: FolderCard) => {
+const FolderCard = ({ folder, onRename }: FolderCardProps) => {
   return (
     <Card className="h-[200px] rounded-[16px] shadow-none border-[1px] border-[#F2F4F3] hover:border-primary cursor-pointer">
       <CardContent className="p-[18px] flex flex-col justify-between h-full">
@@ -30,7 +37,27 @@ const FolderCard = ({ folder }: FolderCard) => {
 
         <div className="flex justify-between mt-2">
           <span className="text-[12px]">{folder.date}</span>
-          <EllipsisVertical width={18} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="p-1 rounded-md hover:bg-gray-100"
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Folder actions"
+              >
+                <EllipsisVertical width={18} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[160px]">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRename?.();
+                }}
+              >
+                <Pencil className="w-4 h-4 mr-2" /> Rename
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardContent>
     </Card>

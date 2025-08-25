@@ -21,9 +21,11 @@ type Task = Database["public"]["Tables"]["tasks"]["Row"] & {
 export const Creations = ({
   id,
   selectedType,
+  fromFolder = false,
 }: {
   id: string;
   selectedType: ContentType | null;
+  fromFolder?: boolean;
 }) => {
   const { user } = useAuth();
   const router = useRouter();
@@ -151,7 +153,11 @@ export const Creations = ({
               <div>{creation?.date}</div>
               <div className="grid grid-cols-1 gap-[16px] mt-[12px]">
                 {creation.data.map((item) => (
-                  <ListCreation key={item.id} task={item} />
+                  <ListCreation
+                    key={item.id}
+                    task={item}
+                    fromFolder={fromFolder}
+                  />
                 ))}
               </div>
             </div>

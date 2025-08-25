@@ -95,3 +95,40 @@ export function isToday(date: string | Date): boolean {
   const today = new Date();
   return dateObj.toDateString() === today.toDateString();
 }
+
+/**
+ * Copy text to clipboard with fallback for older browsers
+ * @param text - Text content to copy to clipboard
+ * @returns Promise that resolves to boolean indicating success
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      // Modern browsers
+      await navigator.clipboard.writeText(text);
+      return true;
+    } else {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+
+      // Make the textarea out of viewport
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+
+      // Focus and select the text
+      textArea.focus();
+      textArea.select();
+
+      // Execute the copy command
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      return successful;
+    }
+  } catch (error) {
+    console.error("Failed to copy text: ", error);
+    return false;
+  }
+}

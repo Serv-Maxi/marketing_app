@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Clip } from "@/lib/video-editor/types";
+import { useTimelineStore } from "@/hooks/video-editor/useTimeline";
 import { useFFmpeg } from "@/hooks/video-editor/useFFmpeg";
 import { AlertCircle, CheckCircle2, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   // Using sonner toast directly
   const { isReady, exportVideo, isMockMode } = useFFmpeg();
+  const { audioTracks } = useTimelineStore();
 
   const handleExport = async () => {
     if (!isReady || clips.length === 0) {
@@ -52,9 +54,13 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
     setExportProgress(0);
 
     try {
-      const result = await exportVideo(clips, (progress) => {
-        setExportProgress(progress);
-      });
+      const result = await exportVideo(
+        clips,
+        (progress) => {
+          setExportProgress(progress);
+        },
+        audioTracks
+      );
 
       if (result) {
         // Create URL from blob
@@ -122,14 +128,21 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground">
                 <p>
-                  Ready to export {clips.length} clips (
+                  Ready to export {clips.length} clip{clips.length !== 1 && "s"}{" "}
+                  {audioTracks.length > 0 && (
+                    <>
+                      + {audioTracks.length} audio track
+                      {audioTracks.length !== 1 && "s"}
+                    </>
+                  )}{" "}
+                  (
                   {clips
                     .reduce(
                       (total, clip) => total + (clip.endTime - clip.startTime),
                       0
                     )
                     .toFixed(1)}
-                  s total)
+                  s video)
                 </p>
               </div>
             </div>

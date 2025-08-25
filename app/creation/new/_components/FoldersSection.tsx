@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Folder } from "lucide-react";
-import { Controller, Control, useWatch } from "react-hook-form";
+import { Controller, Control } from "react-hook-form";
 import { FormData } from "@/types/form";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
@@ -28,14 +28,6 @@ const FoldersSection = ({ control }: FoldersSectionProps) => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Watch the folder_id value to ensure the component re-renders when it changes
-  const folderId = useWatch({
-    control,
-    name: "folder_id",
-  });
-
-  console.log("folderId =>", folderId);
 
   useEffect(() => {
     const fetchFolders = async () => {

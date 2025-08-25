@@ -35,7 +35,7 @@ export default function SignInPage() {
       if (error) {
         setError(error.message);
       } else {
-        router.push("/creation/new");
+        router.push("/home");
       }
     } catch {
       setError("An unexpected error occurred");

@@ -15,6 +15,7 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useTimelineStore } from "@/hooks/video-editor/useTimeline";
+import { Button } from "@/components/ui/button";
 import { Clip } from "@/lib/video-editor/types";
 
 interface TimelineProps {
@@ -35,7 +36,13 @@ const Timeline: React.FC<TimelineProps> = ({
   const timelineRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const { reorderClips, audioTracks } = useTimelineStore();
+  const {
+    reorderClips,
+    audioTracks,
+    selectedCut,
+    executeCutSelection,
+    clearCutSelection,
+  } = useTimelineStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -95,6 +102,20 @@ const Timeline: React.FC<TimelineProps> = ({
 
   return (
     <div className="flex flex-col h-64">
+      {selectedCut && (
+        <div className="flex items-center gap-2 mb-2 bg-muted/40 border border-border rounded-md px-3 py-2">
+          <span className="text-xs text-muted-foreground">
+            Pending {selectedCut.kind === "audio" ? "audio" : "clip"} cut at{" "}
+            {selectedCut.time.toFixed(2)}s
+          </span>
+          <Button size="sm" variant="destructive" onClick={executeCutSelection}>
+            Cut
+          </Button>
+          <Button size="sm" variant="ghost" onClick={clearCutSelection}>
+            Cancel
+          </Button>
+        </div>
+      )}
       <div
         ref={containerRef}
         className="flex-1 overflow-x-auto overflow-y-hidden"
@@ -157,7 +178,7 @@ const Timeline: React.FC<TimelineProps> = ({
                 <h3 className="text-xs font-medium text-muted-foreground mb-2">
                   Audio Tracks
                 </h3>
-                <div className="flex flex-row gap-2">
+                <div className="flex flex-row">
                   {audioTracks.map((audioTrack, index) => (
                     <AudioBlock
                       key={audioTrack.id}

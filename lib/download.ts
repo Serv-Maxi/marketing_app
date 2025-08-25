@@ -1,14 +1,15 @@
 export const handleDownload = async (
-  imageUrl: string,
-  filename: string
+  fileUrl: string,
+  filename: string,
+  extOverride?: string
 ): Promise<void> => {
   try {
-    // Fetch the image
-    const response = await fetch(imageUrl);
+    // Fetch the resource
+    const response = await fetch(fileUrl);
 
     if (!response.ok) {
       throw new Error(
-        `Failed to download image: ${response.status} ${response.statusText}`
+        `Failed to download file: ${response.status} ${response.statusText}`
       );
     }
 
@@ -18,12 +19,26 @@ export const handleDownload = async (
     // Create an object URL for the blob
     const url = window.URL.createObjectURL(blob);
 
+    // Infer extension
+    const contentType = response.headers.get("content-type") || "";
+    const inferExt = () => {
+      if (extOverride) return extOverride.replace(/^\./, "");
+      if (contentType.includes("video/"))
+        return contentType.split("/")[1] || "mp4";
+      if (contentType.includes("image/"))
+        return contentType.split("/")[1] || "png";
+      if (contentType.includes("application/pdf")) return "pdf";
+      return "bin";
+    };
+    const safeName = filename.replace(/[^a-z0-9-_]/gi, "_");
+    const ext = inferExt();
+
     // Create a temporary anchor element
     const link = document.createElement("a");
     link.href = url;
 
     // Set the download attribute with filename
-    link.setAttribute("download", `${filename}.png`);
+    link.setAttribute("download", `${safeName}.${ext}`);
 
     // Append to the document, click it, and remove it
     document.body.appendChild(link);
@@ -33,6 +48,6 @@ export const handleDownload = async (
     // Clean up the object URL
     window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error("Error downloading image:", error);
+    console.error("Error downloading file:", error);
   }
 };

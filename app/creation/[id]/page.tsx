@@ -5,26 +5,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Creation, creationService, TasksService } from "@/services/database";
 
-import {
-  FileText,
-  Image as ImageIcon,
-  Video,
-  Edit,
-  Copy,
-  RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-  Play,
-  MoreHorizontal,
-  LinkIcon,
-} from "lucide-react";
+import { FileText, Image as ImageIcon, Video, LinkIcon } from "lucide-react";
 import Image from "next/image";
 import TextContent from "./_components/Text";
 import Generating from "@/components/shared/generating";
 import LoadingComponent from "@/components/shared/loading-component";
-import Markdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
+
 import ImageContent from "./_components/Image";
+import VideoContent from "./_components/Video";
 
 // Mock data for demonstration
 interface TextResult {
@@ -238,15 +226,6 @@ const CreationDetailPage = () => {
 
   const currentData = mockData[selectedType];
 
-  const handleAction = (
-    action: string,
-    platform?: string,
-    content?: string
-  ) => {
-    console.log(`${action} action for ${platform}:`, content);
-    // Implement actual functionality here
-  };
-
   const navigateVariation = (platform: string, direction: "prev" | "next") => {
     const currentIndex = currentVariations[platform] || 0;
     const maxIndex =
@@ -269,36 +248,15 @@ const CreationDetailPage = () => {
     }));
   };
 
-  const getCurrentContent = (platform: string) => {
-    const result = currentData.results.find((r) => r.platform === platform);
-    const variationIndex = currentVariations[platform] || 0;
-
-    if (variationIndex === 0) {
-      return result;
-    }
-
-    if (selectedType === "TEXT") {
-      const textResult = result as TextResult;
-      return {
-        ...textResult,
-        content:
-          textResult?.variations?.[variationIndex - 1] || textResult?.content,
-      };
-    } else {
-      const mediaResult = result as MediaResult;
-      const variation = mediaResult?.variations?.[variationIndex - 1];
-      return variation ? { ...mediaResult, ...variation } : mediaResult;
-    }
-  };
-
-  const getTotalVariations = (platform: string) => {
-    const result = currentData.results.find((r) => r.platform === platform);
-    return (result?.variations?.length || 0) + 1;
-  };
-
   if (taskStatus === "On Queue") {
     return <Generating taskId={id as string} selectedContentType="Text" />;
   }
+
+  const icons = {
+    IMAGE: "/icons/type-video-white.svg",
+    VIDEO: "/icons/type-video-white.svg",
+    TEXT: "/icons/type-text-white.svg",
+  };
   return (
     <div className="container mx-auto p-8 bg-background">
       {/* Header Card */}
@@ -306,7 +264,7 @@ const CreationDetailPage = () => {
         <div className="flex items-center gap-4">
           <div className="rounded-[12px] overflow-hidden">
             <Image
-              src="/icons/type-image.svg"
+              src={icons[selectedType]}
               width={126}
               height={113}
               alt="Detail Header"
@@ -333,12 +291,8 @@ const CreationDetailPage = () => {
           navigateVariation={navigateVariation}
         />
       )}
-      {selectedType === "IMAGE" && (
-        <ImageContent
-          creation={contentData}
-          navigateVariation={navigateVariation}
-        />
-      )}
+      {selectedType === "IMAGE" && <ImageContent creation={contentData} />}
+      {selectedType === "VIDEO" && <VideoContent creation={contentData} />}
     </div>
   );
 };

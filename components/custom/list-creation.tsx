@@ -26,6 +26,7 @@ type Task = Database["public"]["Tables"]["tasks"]["Row"];
 
 interface ListCreationProps {
   task?: Task;
+  fromFolder?: boolean;
 }
 
 const getContentTypeIcon = (contentType: string) => {
@@ -49,7 +50,10 @@ const getContentType = (contentData: unknown): string => {
   return "Text";
 };
 
-export const ListCreation = ({ task }: ListCreationProps) => {
+export const ListCreation = ({
+  task,
+  fromFolder = false,
+}: ListCreationProps) => {
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -114,12 +118,12 @@ export const ListCreation = ({ task }: ListCreationProps) => {
             </p>
           </div>
         </div>
-        {task.status === "On Queue" ? (
+        {task.status !== "Finished" ? (
           <Badge
             variant="outline"
             className="border-green-500 bg-green-500/5 text-green-500"
           >
-            On Queue
+            {task.status}
           </Badge>
         ) : (
           <DropdownMenu>
@@ -133,10 +137,12 @@ export const ListCreation = ({ task }: ListCreationProps) => {
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Detail
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleFolder}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View Folder
-              </DropdownMenuItem>
+              {!fromFolder && (
+                <DropdownMenuItem onClick={handleFolder}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View Folder
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuItem>
                 <RotateCw className="mr-2 h-4 w-4" />

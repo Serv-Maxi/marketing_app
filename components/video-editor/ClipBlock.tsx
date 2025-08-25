@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Clip } from "@/lib/video-editor/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimelineStore } from "@/hooks/video-editor/useTimeline";
-import { Button } from "@/components/ui/button";
+// Button not currently used
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,14 +34,15 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
   const {
     updateClipTrim,
     restoreClipOriginalDuration,
-    cutClip,
     removeClip,
     duplicateClip,
+    selectedCut,
+    setCutSelection,
   } = useTimelineStore();
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
-  const [originalClip, setOriginalClip] = useState<Clip | null>(null);
+  // Removed unused originalClip state
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const [showControls, setShowControls] = useState(false);
+  // Removed unused showControls state
   const [showCutIndicator, setShowCutIndicator] = useState(false);
   const [cutPosition, setCutPosition] = useState<number>(0);
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
@@ -62,15 +63,15 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
   };
 
   // Generate a color based on the clip index for visual distinction
-  const colors = [
-    "bg-blue-500/20 border-blue-500",
-    "bg-green-500/20 border-green-500",
-    "bg-purple-500/20 border-purple-500",
-    "bg-amber-500/20 border-amber-500",
-    "bg-pink-500/20 border-pink-500",
-  ];
+  // const colors = [
+  //   "bg-blue-500/20 border-blue-500",
+  //   "bg-green-500/20 border-green-500",
+  //   "bg-purple-500/20 border-purple-500",
+  //   "bg-amber-500/20 border-amber-500",
+  //   "bg-pink-500/20 border-pink-500",
+  // ];
 
-  const colorClass = colors[index % colors.length];
+  const colorClass = "bg-purple-500/20 border-purple-500";
 
   // Calculate if clip is trimmed
   const originalDuration =
@@ -79,46 +80,68 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
   const trimPercentage =
     ((clip.endTime - clip.startTime) / originalDuration) * 100;
 
-  // Generate thumbnail from video
+  // Generate thumbnail from video (metadata -> seek -> capture)
   useEffect(() => {
-    const generateThumbnail = async () => {
-      if (!videoRef.current) return;
+    const video = videoRef.current;
+    if (!video) return;
+    let cancelled = false;
 
+    const captureFrame = () => {
+      if (cancelled) return;
+      if (!video.videoWidth || !video.videoHeight) return;
       try {
-        const video = videoRef.current;
-        video.currentTime =
-          clip.startTime + (clip.endTime - clip.startTime) / 2;
-
-        video.addEventListener(
-          "loadeddata",
-          () => {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-
-            if (ctx) {
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-              ctx.drawImage(video, 0, 0);
-
-              const thumbnailDataUrl = canvas.toDataURL("image/jpeg", 0.7);
-              setThumbnailUrl(thumbnailDataUrl);
-            }
-          },
-          { once: true }
-        );
-      } catch (error) {
-        console.error("Error generating thumbnail:", error);
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        setThumbnailUrl(dataUrl);
+      } catch (err) {
+        console.warn("Thumbnail capture failed", err);
       }
     };
 
-    generateThumbnail();
+    const handleSeeked = () => {
+      captureFrame();
+    };
+
+    const handleLoadedMetadata = () => {
+      const desired = clip.startTime + (clip.endTime - clip.startTime) / 2;
+      const safeDuration = video.duration || desired;
+      const target = Math.min(Math.max(desired, 0), safeDuration);
+      if (Math.abs(video.currentTime - target) > 0.05) {
+        video.currentTime = target;
+      } else {
+        captureFrame();
+      }
+    };
+
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("seeked", handleSeeked);
+
+    // If metadata already loaded (cached), proceed immediately
+    if (video.readyState >= 1) {
+      handleLoadedMetadata();
+    } else {
+      try {
+        video.load();
+      } catch {}
+    }
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("seeked", handleSeeked);
+    };
   }, [clip.src, clip.startTime, clip.endTime]);
 
   const handleResizeStart = (e: React.MouseEvent, side: "start" | "end") => {
     e.stopPropagation();
     console.log("Starting resize:", side, "for clip:", clip.id);
     setIsResizing(side);
-    setOriginalClip(clip);
+    // originalClip state removed
     // Also store in refs for the event listeners
     isResizingRef.current = side;
     originalClipRef.current = clip;
@@ -162,61 +185,45 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
 
   const handleResizeEnd = () => {
     setIsResizing(null);
-    setOriginalClip(null);
     isResizingRef.current = null;
     originalClipRef.current = null;
     document.removeEventListener("mousemove", handleResizeMove);
     document.removeEventListener("mouseup", handleResizeEnd);
   };
 
-  const handleRestoreOriginal = () => {
-    restoreClipOriginalDuration(clip.id);
-  };
-
   const handleClipClick = (e: React.MouseEvent) => {
-    // Only handle click if not resizing and not dragging
     if (isResizing || isDragging) return;
-
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clipWidth = rect.width;
-
-    // Calculate the time position of the click
     const relativePosition = clickX / clipWidth;
-    const cutTime =
+    const time =
       clip.startTime + (clip.endTime - clip.startTime) * relativePosition;
-
-    // Don't cut too close to the edges (minimum 0.5 seconds from each edge)
-    const minCutTime = clip.startTime + 0.5;
-    const maxCutTime = clip.endTime - 0.5;
-
-    if (cutTime >= minCutTime && cutTime <= maxCutTime) {
-      cutClip(clip.id, cutTime);
+    const min = clip.startTime + 0.5;
+    const max = clip.endTime - 0.5;
+    if (time >= min && time <= max) {
+      setCutSelection(clip.id, time);
+      setShowCutIndicator(true);
+      setCutPosition(clickX);
     }
   };
 
   const handleClipMouseMove = (e: React.MouseEvent) => {
     if (isResizing || isDragging) return;
-
     const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const clipWidth = rect.width;
-
-    // Show cut indicator when mouse is not near edges
-    const edgeThreshold = 20; // pixels
-    const isNearEdge =
-      mouseX < edgeThreshold || mouseX > clipWidth - edgeThreshold;
-
-    if (!isNearEdge) {
-      setShowCutIndicator(true);
-      setCutPosition(mouseX);
-    } else {
-      setShowCutIndicator(false);
-    }
+    let mouseX = e.clientX - rect.left;
+    // Clamp inside bounds
+    if (mouseX < 0) mouseX = 0;
+    if (mouseX > rect.width) mouseX = rect.width;
+    setShowCutIndicator(true);
+    setCutPosition(mouseX);
   };
 
   const handleClipMouseLeave = () => {
-    setShowCutIndicator(false);
+    // Hide hover indicator only if no selection on this clip
+    if (selectedCut?.clipId !== clip.id) {
+      setShowCutIndicator(false);
+    }
   };
 
   const handleRightClick = (e: React.MouseEvent) => {
@@ -262,7 +269,7 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
           style={style}
           {...attributes}
           {...listeners}
-          className={`relative h-16 rounded-lg border ${colorClass} cursor-grab ${
+          className={`relative h-16 rounded-lg border-2 overflow-hidden ${colorClass} cursor-grab ${
             isDragging ? "opacity-70 shadow-lg" : ""
           } ${isResizing ? "cursor-ew-resize" : ""} ${showCutIndicator ? "cursor-crosshair" : ""} group`}
           initial={{ opacity: 0, y: 10 }}
@@ -276,9 +283,10 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
             duration: 0.3,
             delay: isDragging ? 0 : index * 0.05,
           }}
-          onMouseEnter={() => setShowControls(true)}
+          onMouseEnter={() => {
+            /* placeholder for future hover logic */
+          }}
           onMouseLeave={() => {
-            setShowControls(false);
             handleClipMouseLeave();
           }}
           onMouseMove={handleClipMouseMove}
@@ -297,7 +305,7 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
             onMouseDown={(e) => handleResizeStart(e, "end")}
           />
 
-          <div className="absolute inset-0 p-1 flex flex-col">
+          <div className="absolute inset-0 flex flex-col">
             {/* Thumbnail background */}
             <div className="rounded-md overflow-hidden relative flex-1">
               <div
@@ -323,35 +331,41 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
 
               {/* Trim indicator overlay */}
               {isTrimmed && (
-                <div className="absolute inset-0 bg-black/20 border-2 border-yellow-400 rounded">
-                  <div className="absolute top-1 left-1 text-xs bg-yellow-400 text-black px-1 rounded">
+                <div className="absolute inset-0 bg-black/20 rounded">
+                  <div className="absolute top-1 left-1 text-xs text-black px-1 rounded">
                     {trimPercentage.toFixed(0)}%
                   </div>
                 </div>
               )}
 
               {/* Cut indicator line */}
-              {showCutIndicator && !isResizing && (
-                <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-20"
-                  style={{ left: `${cutPosition}px` }}
-                >
-                  <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
-                    <Scissors className="h-3 w-3 text-red-500 bg-white rounded-full p-0.5" />
+              {(showCutIndicator || selectedCut?.clipId === clip.id) &&
+                !isResizing && (
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-20"
+                    style={{
+                      left:
+                        selectedCut?.clipId === clip.id
+                          ? `${((selectedCut.time - clip.startTime) / (clip.endTime - clip.startTime)) * 100}%`
+                          : `${cutPosition}px`,
+                    }}
+                  >
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
+                      <Scissors className="h-3 w-3 text-red-500 bg-white rounded-full p-0.5" />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
 
             {/* Duration and controls */}
-            <div className="flex justify-between items-center mt-1">
+            <div className="flex justify-between items-center mt-1 absolute bottom-0 left-0 rounded-md">
               {thumbnailUrl && (
                 <div className="flex justify-between items-start absolute bottom-0 left-1 right-0">
                   <span className="text-[12px] font-semibold text-black relative z-10 pl-2 pb-1">
                     {(clip.endTime - clip.startTime).toFixed(1)}s
                   </span>
                   <div
-                    className="absolute bottom-1 left-0 rounded-md"
+                    className="absolute bottom-0 left-0 rounded-md"
                     style={{
                       width: "100px",
                       height: "30px",
@@ -368,12 +382,11 @@ const ClipBlock: React.FC<ClipBlockProps> = ({ clip, index, zoom }) => {
           <video
             ref={videoRef}
             src={clip.src}
-            className="hidden"
+            preload="metadata"
+            crossOrigin="anonymous"
+            className="absolute w-0 h-0 opacity-0 pointer-events-none"
             muted
             playsInline
-            onLoadedData={() => {
-              // Trigger thumbnail generation
-            }}
           />
         </motion.div>
       </AnimatePresence>

@@ -3,13 +3,14 @@
 import { Card, CardContent } from "../ui/card";
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { folderService } from "@/services/database";
 import { Database } from "@/lib/database.types";
 import { formatDateShort } from "@/lib/utils";
 import FolderCard from "../custom/folder-card";
-import CreateFolderPopup from "@/app/creation/folder/_components/CreateFolderPopup";
+import CreateFolderPopup from "@/components/shared/CreateFolderPopup";
+import RenameFolder from "./renmePopup";
 
 type Folder = Database["public"]["Tables"]["folders"]["Row"];
 
@@ -59,8 +60,13 @@ const DefaultFolders = ({ limit }: { limit: number }) => {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-  const fetchFolders = async () => {
+  const fetchFolders = useCallback(async () => {
     if (!user?.id) {
       setLoading(false);
       return;
@@ -78,16 +84,21 @@ const DefaultFolders = ({ limit }: { limit: number }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, limit]);
 
   useEffect(() => {
     fetchFolders();
-  }, [user?.id]);
+  }, [fetchFolders]);
 
   const handleCreateNew = () => setIsCreateFolderOpen(true);
 
   const handleFolderClick = (folderId: string) => {
     router.push(`/creation/folder/${folderId}`);
+  };
+
+  const openRename = (id: string, name: string) => {
+    setRenameTarget({ id, name });
+    setIsRenameOpen(true);
   };
 
   const handleRetry = () => {
@@ -96,7 +107,7 @@ const DefaultFolders = ({ limit }: { limit: number }) => {
         setLoading(true);
         setError(null);
         try {
-          const userFolders = await folderService.getFolders();
+          const userFolders = await folderService.getFolders(limit);
           setFolders(userFolders);
         } catch (error) {
           console.error("Error fetching folders:", error);
@@ -226,8 +237,14 @@ const DefaultFolders = ({ limit }: { limit: number }) => {
         };
 
         return (
-          <div key={folder.id} onClick={() => handleFolderClick(folder.id)}>
-            <FolderCard folder={folderData} />
+          <div key={folder.id} className="group">
+            <div onClick={() => handleFolderClick(folder.id)}>
+              <FolderCard
+                folder={folderData}
+                onRename={() => openRename(folder.id, folder.name)}
+              />
+            </div>
+            {/* hover actions removed; actions moved to card dropdown */}
           </div>
         );
       })}
@@ -237,6 +254,13 @@ const DefaultFolders = ({ limit }: { limit: number }) => {
         isOpen={isCreateFolderOpen}
         onClose={() => setIsCreateFolderOpen(false)}
         onSuccess={() => fetchFolders()}
+      />
+      <RenameFolder
+        isOpen={isRenameOpen}
+        onClose={() => setIsRenameOpen(false)}
+        onSuccess={() => fetchFolders()}
+        folderId={renameTarget?.id || null}
+        currentName={renameTarget?.name}
       />
     </div>
   );
