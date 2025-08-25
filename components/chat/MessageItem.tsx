@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Copy, CopyCheck, Edit, Edit2, Link, Share } from "lucide-react";
+import { Copy, Edit, Link, Share } from "lucide-react";
 import Image from "next/image";
 
 export interface Message {

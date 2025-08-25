@@ -46,6 +46,7 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ audioTrack, index, zoom }) => {
   const { waveformData, isLoading } = useAudioWaveform(audioTrack.src);
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showControls, setShowControls] = useState(false);
   const [showCutIndicator, setShowCutIndicator] = useState(false);
   const [hoverCutPixels, setHoverCutPixels] = useState<number>(0);

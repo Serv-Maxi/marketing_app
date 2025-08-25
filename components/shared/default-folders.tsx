@@ -53,7 +53,7 @@ export const DEFAULT_FOLDER_TEMPLATES = [
   },
 ];
 
-const DefaultFolders = ({ limit }: { limit: number }) => {
+const DefaultFolders = ({ limit }: { limit?: number }) => {
   const router = useRouter();
   const { user } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);

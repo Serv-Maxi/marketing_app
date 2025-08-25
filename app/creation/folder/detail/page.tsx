@@ -12,10 +12,6 @@ const HomePage = () => {
   const router = useRouter();
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
 
-  const handleCreateFolder = () => {
-    // Logic to handle folder creation
-  };
-
   return (
     <div className="container mx-auto p-8 bg-background">
       {/* Header Card */}
