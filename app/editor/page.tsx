@@ -1,5 +1,11 @@
 "use client";
-import VideoEditor from "@/components/video-editor/VideoEditor";
+
+import dynamic from "next/dynamic";
+
+const VideoEditor = dynamic(
+  () => import("@/components/video-editor/VideoEditor"),
+  { ssr: false }
+);
 
 export default function EditorPage() {
   return (

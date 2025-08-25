@@ -20,7 +20,8 @@ export const RecentCreation = () => {
       setError(null);
       try {
         const userCreations = await creationService.getCreations();
-        setCreations(userCreations);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setCreations(userCreations as any);
       } catch (error) {
         console.error("Error fetching recent creations:", error);
         setError("Failed to load recent creations.");
@@ -109,7 +110,8 @@ export const RecentCreation = () => {
   return (
     <div className="grid grid-cols-1 gap-[16px] mt-[12px]">
       {creations.map((creation) => (
-        <ListCreation key={creation.id} creation={creation} />
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <ListCreation key={creation.id} task={creation as any} />
       ))}
     </div>
   );

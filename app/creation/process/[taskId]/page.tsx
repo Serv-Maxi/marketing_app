@@ -8,8 +8,8 @@ import { TasksService } from "@/services/database";
 import { CheckCircle } from "lucide-react";
 
 const Generating = () => {
-  const params = useParams();
-  const taskId = params.taskId as string;
+  const params = useParams<{ taskId: string }>();
+  const taskId = params?.taskId;
 
   const router = useRouter();
   const [progress, setProgress] = useState(15);

@@ -22,8 +22,12 @@ import { useSearchParams, useRouter } from "next/navigation";
 const HomePage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const typeFromUrl = searchParams.get("type") as ContentType | null;
-  const folderFromUrl = searchParams.get("folder") as string | null;
+  const rawType = searchParams?.get("type");
+  const allowedTypes: ContentType[] = ["Text", "Image", "Video"];
+  const typeFromUrl = allowedTypes.includes(rawType as ContentType)
+    ? (rawType as ContentType)
+    : null;
+  const folderFromUrl = searchParams?.get("folder") || null;
 
   const [selectedContentType, setSelectedContentType] =
     useState<ContentType>("Text");

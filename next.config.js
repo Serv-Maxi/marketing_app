@@ -34,6 +34,7 @@ const nextConfig = {
 
     return config;
   },
+  output: "standalone",
   // Enable experimental features needed for FFmpeg
   experimental: {
     serverComponentsExternalPackages: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],

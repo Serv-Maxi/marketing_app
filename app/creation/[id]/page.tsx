@@ -165,7 +165,9 @@ const CreationDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<string | null>(null);
-  const { id } = useParams();
+  // Typed dynamic route params to satisfy stricter TS in Docker build
+  const params = useParams<{ id: string }>();
+  const id = params?.id; // handle potential null/undefined defensively
 
   useEffect(() => {
     const fetchData = async () => {

@@ -13,7 +13,9 @@ import { ContentType as TypeContentType } from "@/types/global";
 
 const HomePage = () => {
   const router = useRouter();
-  const { id } = useParams();
+  // Typed params for stricter build environment
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [folderDetail, setFolderDetail] = useState<Folder | null>(null);
   const [taskCount, setTaskCount] = useState<number>(0);
