@@ -1,17 +1,28 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Monitor, Smartphone } from "lucide-react";
+import { Control, useFormState } from "react-hook-form";
+import { FormData } from "@/types/form";
 
 interface AspectRatioProps {
   selectRatio: string;
+  control: Control<FormData>;
   toogleAspectRatio: (resolution: string) => void;
 }
 
-const AspectRatio = ({ selectRatio, toogleAspectRatio }: AspectRatioProps) => {
+const AspectRatio = ({
+  selectRatio,
+  toogleAspectRatio,
+  control,
+}: AspectRatioProps) => {
+  const { errors } = useFormState({ control });
+
   return (
     <Card className="p-[24px] bg-white rounded-[24px] shadow-none">
       <div className="space-y-6">
-        <h3 className="text-xl font-bold">Ratio Settings</h3>
+        <h3 className="text-xl font-bold">
+          Ratio Settings <span className="text-red-500">*</span>
+        </h3>
 
         {/* Video Resolution */}
         <div className="space-y-3">
@@ -43,6 +54,11 @@ const AspectRatio = ({ selectRatio, toogleAspectRatio }: AspectRatioProps) => {
             </Badge>
           </div>
         </div>
+        {errors.aspect_ratio && (
+          <p className="text-xs text-red-500 pt-1">
+            {String(errors.aspect_ratio.message) || "Aspecr ratio is required"}
+          </p>
+        )}
       </div>
     </Card>
   );

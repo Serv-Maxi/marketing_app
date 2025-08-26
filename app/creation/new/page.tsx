@@ -52,7 +52,7 @@ const HomePage = () => {
       use_emoji: z.boolean().default(false),
       tone: z.string().optional(),
       language: z.string().min(1, { message: "Language is required" }),
-      folder_id: z.string().optional(),
+      folder_id: z.string().min(1, { message: "Folder is required" }),
       aspect_ratio: z.string().optional(),
     })
     .superRefine((data, ctx) => {
@@ -64,6 +64,13 @@ const HomePage = () => {
           code: z.ZodIssueCode.custom,
           path: ["platforms"],
           message: "Platform required for Text",
+        });
+      }
+      if (["Text", "Image"].includes(data.type) && !data.aspect_ratio) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["aspect_ratio"],
+          message: "Aspect ratio required for Text and Image",
         });
       }
     });
@@ -129,8 +136,6 @@ const HomePage = () => {
     setSelectRatio(newResolution);
     setValue("aspect_ratio", newResolution);
   };
-
-  console.log(errors);
 
   const onSubmit = async (data: FormType) => {
     setCreationState({ status: "loading", data: [], error: "" });
@@ -208,8 +213,9 @@ const HomePage = () => {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 mt-[24px]">
         <MainPromptSection register={register} errors={errors} />
 
-        {selectedContentType !== "Text" && (
+        {selectedContentType !== "Video" && (
           <AspectRatio
+            control={control}
             selectRatio={selectRatio}
             toogleAspectRatio={toogleAspectRatio}
           />

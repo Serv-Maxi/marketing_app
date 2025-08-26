@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Folder } from "lucide-react";
-import { Controller, Control } from "react-hook-form";
+import { Controller, Control, useFormState } from "react-hook-form";
 import { FormData } from "@/types/form";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
@@ -24,6 +24,7 @@ interface FoldersSectionProps {
 type Folder = Database["public"]["Tables"]["folders"]["Row"];
 
 const FoldersSection = ({ control }: FoldersSectionProps) => {
+  const { errors } = useFormState({ control });
   const { user } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setLoading] = useState(true);
@@ -56,7 +57,9 @@ const FoldersSection = ({ control }: FoldersSectionProps) => {
   return (
     <Card className="p-[24px] bg-white rounded-[24px] shadow-none">
       <div className="space-y-6">
-        <h3 className="text-xl font-bold">Choose Folders</h3>
+        <h3 className="text-xl font-bold">
+          Choose Folders <span className="text-red-500">*</span>
+        </h3>
 
         {/* Folders */}
         <div className="space-y-2">
@@ -128,6 +131,12 @@ const FoldersSection = ({ control }: FoldersSectionProps) => {
             )}
           />
         </div>
+
+        {errors.folder_id && (
+          <p className="text-xs text-red-500 pt-1">
+            {String(errors.folder_id.message) || "Folder is required"}
+          </p>
+        )}
       </div>
     </Card>
   );
