@@ -34,25 +34,39 @@ const HomePage = () => {
   const { platforms, isLoading: platformsLoading } = usePlatforms();
 
   // Zod schema for form validation
-  const formSchema = z.object({
-    type: z.enum(["Text", "Image", "Video"]).default("Text"),
-    prompt: z
-      .string()
-      .min(1, { message: "Prompt is required" })
-      .max(4000, { message: "Prompt too long" }),
-    platforms: z.array(z.string()).min(1, { message: "Platform required" }),
-    audience: z.string().optional(),
-    campaign_goal: z.string().optional(),
-    value_proposition: z.string().optional(),
-    selling_point: z.string().optional(),
-    selling_features: z.string().optional(),
-    cta: z.string().optional(),
-    use_emoji: z.boolean().default(false),
-    tone: z.string().optional(),
-    language: z.string().min(1, { message: "Language is required" }),
-    folder_id: z.string().optional(),
-    aspect_ratio: z.string().optional(),
-  });
+  const formSchema = z
+    .object({
+      type: z.enum(["Text", "Image", "Video"]).default("Text"),
+      prompt: z
+        .string()
+        .min(1, { message: "Prompt is required" })
+        .max(4000, { message: "Prompt too long" }),
+      // Platforms only required when type === "Text"
+      platforms: z.array(z.string()).default([]),
+      audience: z.string().optional(),
+      campaign_goal: z.string().optional(),
+      value_proposition: z.string().optional(),
+      selling_point: z.string().optional(),
+      selling_features: z.string().optional(),
+      cta: z.string().optional(),
+      use_emoji: z.boolean().default(false),
+      tone: z.string().optional(),
+      language: z.string().min(1, { message: "Language is required" }),
+      folder_id: z.string().optional(),
+      aspect_ratio: z.string().optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (
+        data.type === "Text" &&
+        (!data.platforms || data.platforms.length === 0)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["platforms"],
+          message: "Platform required for Text",
+        });
+      }
+    });
 
   const {
     control,
@@ -115,6 +129,8 @@ const HomePage = () => {
     setSelectRatio(newResolution);
     setValue("aspect_ratio", newResolution);
   };
+
+  console.log(errors);
 
   const onSubmit = async (data: FormType) => {
     setCreationState({ status: "loading", data: [], error: "" });
