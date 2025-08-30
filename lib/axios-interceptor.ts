@@ -15,8 +15,7 @@ const axiosInterceptor = axios.create({
 // Request Interceptor: Attach token from next-auth session
 axiosInterceptor.interceptors.request.use(
   async (config) => {
-    const token =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTI3NTE5NzJ9.lQcBFoi8xCPfw6yMsuVDCHmfNFB9SaYDVmM5vqfERU8";
+    const token = "";
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
