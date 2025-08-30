@@ -11,8 +11,9 @@ export default function ConditionalHeader() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  // Hide header on the editor pages
-  if (pathname?.startsWith("/editor")) return null;
+  // Hide header on editor and admin management pages
+  if (pathname?.startsWith("/editor") || pathname?.startsWith("/admin"))
+    return null;
 
   if (!user) return null;
   return <Header />;

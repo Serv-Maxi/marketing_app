@@ -51,7 +51,7 @@ function EditCompanyDialog({
   async function onSubmit(values: FormValues) {
     setLoading(true);
     try {
-  await adminCompaniesService.update(company.id, { name: values.name });
+      await adminCompaniesService.update(company.id, { name: values.name });
       toast.success("Company updated");
       setOpen(false);
       onChanged?.();

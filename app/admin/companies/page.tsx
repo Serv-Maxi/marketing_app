@@ -49,7 +49,7 @@ export default function CompaniesPage() {
     },
   ];
   return (
-    <section className="p-8 rounded-xl container m-auto mt-[40px]">
+    <section className="p-4 rounded-xl container m-auto">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-semibold">Companies</h2>
         <CreateCompanyDialog onCreated={() => refetch()} />
@@ -59,7 +59,7 @@ export default function CompaniesPage() {
           <Input
             name="q"
             placeholder="Search companies..."
-            className="max-w-sm bg-white"
+            className="max-w-sm bg-white rounded-[12px]"
           />
         </form>
       </div>

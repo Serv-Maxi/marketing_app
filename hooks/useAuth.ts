@@ -40,10 +40,55 @@ export function useAuth() {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    // Basic client-side brute force mitigation (not a replacement for server rate limiting)
+    const MAX_ATTEMPTS = 5; // allowed attempts in window
+    const WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+    const COOLDOWN_MS = 2 * 60 * 1000; // lockout duration after exceeding
+    const STORAGE_KEY = "auth_attempts_v1";
+
+    type Stored = { t: number; success?: boolean }[];
+    const now = Date.now();
+    let stored: Stored = [];
+    try {
+      stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    } catch {
+      stored = [];
+    }
+    // Remove old entries
+    stored = stored.filter(
+      (a) => now - a.t <= WINDOW_MS || (a.success && now - a.t <= COOLDOWN_MS)
+    );
+
+    const failures = stored.filter((a) => !a.success && now - a.t <= WINDOW_MS);
+    const exceeded = failures.length >= MAX_ATTEMPTS;
+    const lockStart = exceeded ? failures.slice(-MAX_ATTEMPTS)[0].t : null;
+    const inCooldown =
+      exceeded && lockStart !== null && now - lockStart < COOLDOWN_MS;
+
+    if (inCooldown) {
+      const remaining = COOLDOWN_MS - (now - (lockStart as number));
+      const seconds = Math.ceil(remaining / 1000);
+      return {
+        data: { session: null, user: null },
+        error: {
+          name: "AuthRateLimit",
+          message: `Too many attempts. Try again in ${seconds}s.`,
+        },
+      } as const;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    stored.push({ t: now, success: !error });
+    // Keep only last 50 entries to bound size
+    stored = stored.slice(-50);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    } catch {
+      /* ignore storage errors */
+    }
     return { data, error };
   };
 

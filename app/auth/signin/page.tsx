@@ -13,8 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import Link from "next/link";
+// import { Separator } from "@/components/ui/separator";
+// import Link from "next/link";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -118,15 +118,16 @@ export default function SignInPage() {
             </div>
 
             <Button
-              type="button"
+              type="submit"
               disabled={loading}
               className="w-full bg-[#9E2AB2] hover:bg-[#8A1F99] text-white rounded-[12px] h-11"
+              aria-busy={loading}
             >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <Separator />
 
             <div className="text-center text-sm text-gray-600">
@@ -138,7 +139,7 @@ export default function SignInPage() {
                 Sign up
               </Link>
             </div>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>

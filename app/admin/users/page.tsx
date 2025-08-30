@@ -97,7 +97,7 @@ export default function UsersPage() {
   ];
 
   return (
-    <section className="p-8 rounded-xl container m-auto mt-[40px]">
+    <section className="p-4 rounded-xl container m-auto">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-semibold">Users</h2>
         <CreateUserDialog onSaved={refetch} />
@@ -120,7 +120,7 @@ function Toolbar({ onQuery }: { onQuery: (q: string) => void }) {
     <div className="flex gap-2 items-center w-[300px]">
       <Input
         placeholder="Search users..."
-        className="max-w-sm bg-white"
+        className="max-w-sm bg-white rounded-[12px]"
         onChange={(e) => onQuery(e.target.value)}
       />
     </div>

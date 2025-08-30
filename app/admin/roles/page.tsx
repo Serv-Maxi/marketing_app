@@ -45,7 +45,7 @@ export default function RolesPage() {
     },
   ];
   return (
-    <section className="p-8 rounded-xl container m-auto mt-[40px]">
+    <section className="p-4 rounded-xl container m-auto">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-semibold">Roles</h2>
         <CreateRoleDialog onCreated={refetch} />
@@ -55,7 +55,7 @@ export default function RolesPage() {
           <Input
             name="q"
             placeholder="Search roles..."
-            className="max-w-sm bg-white"
+            className="max-w-sm bg-white rounded-[12px]"
           />
         </form>
       </div>
