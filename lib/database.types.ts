@@ -38,26 +38,129 @@ export interface Database {
         Row: {
           id: string;
           email: string;
-          full_name: string | null;
+          name: string | null;
           avatar_url: string | null;
+          role_id: string | null; // added for role association
           created_at: string;
           updated_at: string;
+          metadata: Json | null; // added to store roles & companies mapping
         };
         Insert: {
           id?: string;
           email: string;
-          full_name?: string | null;
+          name?: string | null;
           avatar_url?: string | null;
+          role_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          metadata?: Json | null;
         };
         Update: {
           id?: string;
           email?: string;
-          full_name?: string | null;
+          name?: string | null;
           avatar_url?: string | null;
+          role_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          metadata?: Json | null;
+        };
+      };
+      roles: {
+        Row: {
+          id: string; // uuid
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          created_at?: string;
+        };
+      };
+      permissions: {
+        Row: {
+          id: string; // uuid
+          resource: string; // e.g. companies, videos, users
+          action: string; // e.g. read, insert, update, delete
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          resource: string;
+          action: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          resource?: string;
+          action?: string;
+          created_at?: string;
+        };
+      };
+      role_permissions: {
+        Row: {
+          role_id: string;
+          permission_id: string;
+          fields: Json[] | null;
+          created_at: string;
+        };
+        Insert: {
+          role_id: string;
+          permission_id: string;
+          fields?: Json[] | null;
+          created_at?: string;
+        };
+        Update: {
+          role_id?: string;
+          permission_id?: string;
+          fields?: Json[] | null;
+          created_at?: string;
+        };
+      };
+      user_roles: {
+        Row: {
+          id: string; // uuid
+          user_id: string;
+          company_id: string; // company the role applies to
+          roles: string[]; // array of role ids
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          company_id: string;
+          roles: string[];
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          company_id?: string;
+          roles?: string[];
+          created_at?: string;
+        };
+      };
+      companies: {
+        Row: {
+          id: string; // uuid
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          created_at?: string;
         };
       };
       folders: {

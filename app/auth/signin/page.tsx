@@ -118,7 +118,7 @@ export default function SignInPage() {
             </div>
 
             <Button
-              type="submit"
+              type="button"
               disabled={loading}
               className="w-full bg-[#9E2AB2] hover:bg-[#8A1F99] text-white rounded-[12px] h-11"
             >
