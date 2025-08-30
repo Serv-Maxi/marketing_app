@@ -2,10 +2,9 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Creation, creationService, TasksService } from "@/services/database";
 
-import { FileText, Image as ImageIcon, Video, LinkIcon } from "lucide-react";
+import { FileText, Image as ImageIcon, Video } from "lucide-react";
 import Image from "next/image";
 import TextContent from "./_components/Text";
 import Generating from "@/components/shared/generating";
@@ -279,11 +278,7 @@ const CreationDetailPage = () => {
               {currentData.description}
             </p>
           </div>
-          <div className="flex justify-end ml-auto">
-            <Button className="bg-secondary">
-              Copy Link <LinkIcon />
-            </Button>
-          </div>
+          {/* Copy Link button moved to video-only view page (/creation/view/[id]) */}
         </div>
       </Card>
 
