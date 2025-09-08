@@ -61,7 +61,9 @@ export default function Home() {
           </ul>
         </nav>
         <Link href="/home">
-          <Button className="rounded-[12px]">Sign in</Button>
+          <Button variant="outline" className="rounded-[12px]">
+            Sign in
+          </Button>
         </Link>
       </header>
 

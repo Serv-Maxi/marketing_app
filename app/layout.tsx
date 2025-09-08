@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
-import ConditionalHeader from "@/components/shared/conditional-header";
-import { AppMain } from "@/components/shared/app-main";
 import { Toaster } from "@/components/ui/sonner";
 
 // Using Inter as it's the closest to MD Sans design principles
@@ -27,8 +25,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${dmsans.variable} font-sans antialiased`}>
         <Toaster />
-        <ConditionalHeader />
-        <AppMain>{children}</AppMain>
+        {children}
       </body>
     </html>
   );
