@@ -19,7 +19,7 @@ import {
   SidebarFooter,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { Users, Building2, Shield, LogOut } from "lucide-react";
+import { Users, Building2, Shield, LogOut, Sparkle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,6 +55,8 @@ export default function AdminLayout({
     { label: "Roles", href: "/admin/roles", icon: Shield },
   ];
 
+  const models = [{ label: "Models", href: "/admin/models", icon: Sparkle }];
+
   return (
     <SidebarProvider
       style={
@@ -79,6 +81,28 @@ export default function AdminLayout({
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map((item) => {
+                  const Icon = item.icon;
+                  const active = pathname?.startsWith(item.href);
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={!!active}>
+                        <Link
+                          href={item.href}
+                          className="flex items-center gap-2"
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+            <SidebarGroupLabel>User Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {models.map((item) => {
                   const Icon = item.icon;
                   const active = pathname?.startsWith(item.href);
                   return (
