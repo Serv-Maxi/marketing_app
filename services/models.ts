@@ -6,9 +6,9 @@ export type ModelRow = {
   id: string;
   type: ModelType;
   code: string;
-  alt_code: string;
+  alt_code?: string;
   name: string;
-  active: boolean;
+  active?: boolean;
   price: number;
   metadata: Record<string, unknown> | null;
   created_at: string;

@@ -5,9 +5,6 @@ import { modelsService, ModelRow } from "@/services/models";
 import { Input } from "@/components/ui/input";
 import CreateModelDialog from "@/app/admin/models/_components/create-model-dialog";
 import { AdminTable, ColumnDef } from "../../../components/shared/admin-table";
-import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
-import DeleteModelDialog from "@/app/admin/models/_components/delete-model-dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
@@ -50,7 +47,7 @@ export default function ModelsPage() {
         (model) =>
           model.name.toLowerCase().includes(q) ||
           model.code.toLowerCase().includes(q) ||
-          model.alt_code.toLowerCase().includes(q) ||
+          model?.alt_code?.toLowerCase().includes(q) ||
           model.type.toLowerCase().includes(q)
       )
     : models;
@@ -82,16 +79,10 @@ export default function ModelsPage() {
       header: "Active",
       cell: (r) => (
         <Switch
-          checked={r.active}
-          onCheckedChange={() => handleToggleActive(r.id, r.active)}
+          checked={r?.active ?? false}
+          onCheckedChange={() => handleToggleActive(r.id, r?.active ?? false)}
         />
       ),
-    },
-    {
-      key: "actions",
-      header: "",
-      cell: (r) => <ModelRowActions model={r} refetch={refetch} />,
-      className: "text-right w-24",
     },
   ];
 
@@ -122,34 +113,6 @@ function Toolbar({ onQuery }: { onQuery: (q: string) => void }) {
         className="max-w-sm bg-white rounded-[12px]"
         onChange={(e) => onQuery(e.target.value)}
       />
-    </div>
-  );
-}
-
-function ModelRowActions({
-  model,
-  refetch,
-}: {
-  model: ModelRow;
-  refetch: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-end gap-1">
-      <CreateModelDialog
-        model={model}
-        onSaved={refetch}
-        trigger={
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Edit model"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-        }
-      />
-      <DeleteModelDialog modelId={model.id} onDeleted={refetch} />
     </div>
   );
 }

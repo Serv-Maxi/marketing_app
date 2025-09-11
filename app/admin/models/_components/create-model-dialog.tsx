@@ -25,50 +25,28 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
-const schema = z
-  .object({
-    type: z.enum(["Image", "Text", "Video"] as const),
-    code: z.string().min(1, "Code is required"),
-    alt_code: z.string().default(""),
-    name: z.string().min(1, "Name is required"),
-    active: z.boolean().default(true),
-    price: z.preprocess(
-      (val) => (val === "" ? 0 : Number(val)),
-      z.number().min(0, "Price must be a positive number")
-    ),
-    metadata: z
-      .string()
-      .optional()
-      .transform((val) => {
-        if (!val) return null;
-        try {
-          return JSON.parse(val);
-        } catch {
-          return null;
-        }
-      }),
-  })
-  .refine(
-    (data) => {
-      // If active is true, metadata must contain a payload
-      if (data.active) {
-        // Check if metadata is null, undefined, or an empty object
-        const isEmptyMetadata =
-          !data.metadata || Object.keys(data.metadata).length === 0;
-        if (isEmptyMetadata || !data.metadata.payload) {
-          return false;
-        }
+const schema = z.object({
+  type: z.enum(["Image", "Text", "Video"] as const),
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+  price: z.preprocess(
+    (val) => (val === "" ? 0 : Number(val)),
+    z.number().min(0, "Price must be a positive number")
+  ),
+  metadata: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return null;
+      try {
+        return JSON.parse(val);
+      } catch {
+        return null;
       }
-      return true;
-    },
-    {
-      message: "To activate a model, you must set a payload in metadata",
-      path: ["active"],
-    }
-  );
+    }),
+});
 
 export type CreateModelFormValues = z.infer<typeof schema>;
 
@@ -91,11 +69,8 @@ export default function CreateModelDialog({
     defaultValues: {
       type: "Text" as ModelType,
       code: "",
-      alt_code: "",
       name: "",
-      active: true,
       price: 0,
-      metadata: "",
     },
   });
 
@@ -104,9 +79,8 @@ export default function CreateModelDialog({
       form.reset({
         type: model.type,
         code: model.code,
-        alt_code: model.alt_code || "",
+
         name: model.name,
-        active: model.active,
         price: model.price,
         metadata: model.metadata ? JSON.stringify(model.metadata, null, 2) : "",
       });
@@ -201,21 +175,6 @@ export default function CreateModelDialog({
 
           <div className="space-y-1.5">
             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-[8px] block">
-              Alt Code
-            </label>
-            <Input
-              placeholder="Enter Alt Code"
-              {...form.register("alt_code")}
-            />
-            {form.formState.errors.alt_code && (
-              <p className="text-xs text-red-500">
-                {form.formState.errors.alt_code.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-[8px] block">
               Name
             </label>
             <Input placeholder="Enter Name" {...form.register("name")} />
@@ -255,32 +214,6 @@ export default function CreateModelDialog({
             <p className="text-xs text-muted-foreground mt-1">
               A &quot;payload&quot; property is required to activate the model
             </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="active"
-                checked={form.watch("active")}
-                onCheckedChange={(checked) =>
-                  form.setValue("active", checked, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-              />
-              <label
-                htmlFor="active"
-                className="text-xs font-medium uppercase tracking-wide"
-              >
-                Active
-              </label>
-            </div>
-            {form.formState.errors.active && (
-              <p className="text-xs text-red-500 mt-1">
-                {form.formState.errors.active.message}
-              </p>
-            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
