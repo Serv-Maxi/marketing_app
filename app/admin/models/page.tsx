@@ -1,33 +1,61 @@
 "use client";
 
 import React from "react";
-import { modelsService, ModelRow } from "@/services/models";
-import { Input } from "@/components/ui/input";
+import { modelsService, ModelRow, PaginationParams } from "@/services/models";
 import CreateModelDialog from "@/app/admin/models/_components/create-model-dialog";
 import { AdminTable, ColumnDef } from "../../../components/shared/admin-table";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import {
+  PaginationControl,
+  SearchToolbar,
+} from "@/components/shared/pagination-control";
 
 export default function ModelsPage() {
   const [models, setModels] = React.useState<ModelRow[]>([]);
-  const [query, setQuery] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [pagination, setPagination] = React.useState<PaginationParams>({
+    page: 1,
+    pageSize: 10,
+    search: "",
+  });
+  const [totalItems, setTotalItems] = React.useState(0);
+  const [pageCount, setPageCount] = React.useState(1);
 
   const refetch = React.useCallback(async () => {
     setLoading(true);
     try {
-      const modelsData = await modelsService.list();
-      setModels(modelsData);
+      const response = await modelsService.list(pagination);
+      setModels(response.data);
+      setTotalItems(response.total);
+      setPageCount(response.pageCount);
     } catch (error) {
       console.error("Failed to fetch models:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination]);
 
   React.useEffect(() => {
     refetch();
   }, [refetch]);
+
+  const handlePageChange = (page: number) => {
+    setPagination((prev) => ({ ...prev, page }));
+  };
+
+  const handlePageSizeChange = (pageSize: string) => {
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+      pageSize: parseInt(pageSize),
+    }));
+  };
+
+  // Handle search input from toolbar
+  const handleSearch = (searchQuery: string) => {
+    setPagination((prev) => ({ ...prev, page: 1, search: searchQuery }));
+  };
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
@@ -41,17 +69,7 @@ export default function ModelsPage() {
     }
   };
 
-  const q = query.toLowerCase();
-  const filtered = q
-    ? models.filter(
-        (model) =>
-          model.name.toLowerCase().includes(q) ||
-          model.code.toLowerCase().includes(q) ||
-          model?.alt_code?.toLowerCase().includes(q) ||
-          model.type.toLowerCase().includes(q)
-      )
-    : models;
-
+  // Columns definition
   const columns: ColumnDef<ModelRow>[] = [
     {
       key: "_num",
@@ -93,26 +111,26 @@ export default function ModelsPage() {
         <CreateModelDialog onSaved={refetch} />
       </div>
       <div className="pt-4 pb-8 flex justify-end">
-        <Toolbar onQuery={setQuery} />
+        <div className="w-[300px]">
+          <SearchToolbar
+            onSearch={handleSearch}
+            placeholder="Search models..."
+          />
+        </div>
       </div>
       <div className="px-8 py-[50px] rounded-[24px] container m-auto bg-white">
-        <AdminTable columns={columns} data={filtered} rowKey={(r) => r.id} />
-        {loading && (
-          <p className="text-xs text-muted-foreground mt-2">Refreshing...</p>
-        )}
+        <AdminTable columns={columns} data={models} rowKey={(r) => r.id} />
+
+        <PaginationControl
+          currentPage={pagination.page}
+          pageCount={pageCount}
+          pageSize={pagination.pageSize}
+          totalItems={totalItems}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          isLoading={loading}
+        />
       </div>
     </section>
-  );
-}
-
-function Toolbar({ onQuery }: { onQuery: (q: string) => void }) {
-  return (
-    <div className="flex gap-2 items-center w-[300px]">
-      <Input
-        placeholder="Search models..."
-        className="max-w-sm bg-white rounded-[12px]"
-        onChange={(e) => onQuery(e.target.value)}
-      />
-    </div>
   );
 }

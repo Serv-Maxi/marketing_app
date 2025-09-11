@@ -24,14 +24,60 @@ export type ModelUpdate = {
   metadata?: Record<string, unknown> | null;
 };
 
+export type PaginationParams = {
+  page: number;
+  pageSize: number;
+  search?: string;
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+
 export const modelsService = {
-  async list(): Promise<ModelRow[]> {
-    const { data, error } = await supabase
-      .from("models")
-      .select("*")
-      .order("id", { ascending: false });
+  async list(
+    pagination?: PaginationParams
+  ): Promise<PaginatedResponse<ModelRow>> {
+    let query = supabase.from("models").select("*", { count: "exact" });
+
+    // Apply search if provided
+    if (pagination?.search) {
+      const searchTerm = pagination.search.toLowerCase();
+      query = query.or(
+        `name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,alt_code.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%`
+      );
+    }
+
+    // Apply pagination if provided
+    if (pagination) {
+      const { page, pageSize } = pagination;
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize - 1;
+      query = query.range(start, end);
+    }
+
+    query = query.order("id", { ascending: false });
+
+    const { data, error, count } = await query;
+
     if (error) throw error;
-    return data as ModelRow[];
+
+    const pageSize = pagination?.pageSize || data.length;
+    const page = pagination?.page || 1;
+    const total = count || data.length;
+    const pageCount = Math.ceil(total / pageSize);
+
+    return {
+      data: data as ModelRow[],
+      total,
+      page,
+      pageSize,
+      pageCount,
+    };
   },
 
   async create(model: Omit<ModelRow, "id" | "created_at">): Promise<ModelRow> {
