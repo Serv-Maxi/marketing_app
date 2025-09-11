@@ -18,6 +18,7 @@ import { Task, TasksService } from "@/services/database";
 import { ContentType } from "@/types/global";
 import ContentTypeComponent from "@/components/shared/content-type";
 import { useSearchParams, useRouter } from "next/navigation";
+import ModelSelection from "./_components/ModelSelection";
 
 const HomePage = () => {
   const router = useRouter();
@@ -54,6 +55,7 @@ const HomePage = () => {
       language: z.string().min(1, { message: "Language is required" }),
       folder_id: z.string().min(1, { message: "Folder is required" }),
       aspect_ratio: z.string().optional(),
+      model_code: z.string().optional(),
     })
     .superRefine((data, ctx) => {
       if (
@@ -99,6 +101,7 @@ const HomePage = () => {
       language: "english",
       folder_id: folderFromUrl || "",
       aspect_ratio: "",
+      model_code: "",
     },
   });
 
@@ -211,6 +214,10 @@ const HomePage = () => {
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 mt-[24px]">
+        {selectedContentType !== "Text" && (
+          <ModelSelection control={control} type={selectedContentType} />
+        )}
+
         <MainPromptSection register={register} errors={errors} />
 
         {selectedContentType !== "Video" && (

@@ -150,7 +150,7 @@ export default function CreateModelDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Image">Image</SelectItem>
-                <SelectItem value="Text">Text</SelectItem>
+                {/* <SelectItem value="Text">Text</SelectItem> */}
                 <SelectItem value="Video">Video</SelectItem>
               </SelectContent>
             </Select>

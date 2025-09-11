@@ -13,4 +13,5 @@ export interface FormData {
   language: string;
   folder_id: string;
   aspect_ratio?: string;
+  model_code?: string;
 }

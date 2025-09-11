@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { ContentType } from "@/types/global";
 
 export type ModelType = "Image" | "Text" | "Video";
 
@@ -80,6 +81,21 @@ export const modelsService = {
     };
   },
 
+  async getActiveModels({ type }: { type: ContentType }): Promise<ModelRow[]> {
+    const { data, error } = await supabase
+      .from("models")
+      .select("*")
+      .eq("active", true)
+      .eq("type", type)
+      .order("name", { ascending: true });
+
+    if (error) throw error;
+
+    // Filter out any models with empty codes to prevent Select component issues
+    return (data as ModelRow[]).filter(
+      (model) => model.code && model.code.trim() !== ""
+    );
+  },
   async create(model: Omit<ModelRow, "id" | "created_at">): Promise<ModelRow> {
     const { data, error } = await supabase
       .from("models")

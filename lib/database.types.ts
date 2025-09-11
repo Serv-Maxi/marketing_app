@@ -279,6 +279,7 @@ export interface Database {
           language: string;
           folder_id: string;
           aspect_ratio?: string;
+          model_code?: string;
           status: GenerateStatus;
           created_at?: string;
           updated_at?: string;
@@ -299,6 +300,7 @@ export interface Database {
           language: string;
           folder_id: string;
           aspect_ratio?: string;
+          model_code?: string;
           status: GenerateStatus;
           created_at?: string;
           updated_at?: string;
@@ -320,6 +322,7 @@ export interface Database {
           language?: string;
           folder?: string;
           aspect_ratio?: string;
+          model_code?: string;
           status: GenerateStatus;
           created_at?: string;
           updated_at?: string;
