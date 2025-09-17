@@ -367,7 +367,7 @@ const CreationDetailPage = () => {
       )}
 
       {(selectedType === "IMAGE" || selectedType === "VIDEO") && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1">
           {(currentData.results as MediaResult[]).map((result) => {
             const currentContent = getCurrentContent(
               result.platform

@@ -254,7 +254,7 @@ const CreationDetailPage = () => {
   }
 
   const icons = {
-    IMAGE: "/icons/type-video-white.svg",
+    IMAGE: "/icons/type-image-white.svg",
     VIDEO: "/icons/type-video-white.svg",
     TEXT: "/icons/type-text-white.svg",
   };

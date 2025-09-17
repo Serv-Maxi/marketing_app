@@ -99,7 +99,7 @@ export default function AdminLayout({
                 })}
               </SidebarMenu>
             </SidebarGroupContent>
-            <SidebarGroupLabel>User Management</SidebarGroupLabel>
+            <SidebarGroupLabel>Models Management</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {models.map((item) => {
